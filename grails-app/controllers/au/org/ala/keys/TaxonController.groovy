@@ -160,9 +160,9 @@ class TaxonController {
         def map = [:]
 
         t.values.each() { a ->
-            if (a.attribute.characterTypeText) {
+            if (a.attribute.isText) {
                 map.put(a.attribute.label, a.text)
-            } else if (a.attribute.characterTypeNumeric) {
+            } else if (a.attribute.isNumeric) {
                 if (a.min == a.max) {
                     map.put(a.attribute.label, (a.min + " " + a.attribute.units).trim())
                 } else {

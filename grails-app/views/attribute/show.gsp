@@ -27,24 +27,24 @@
     </g:if>
     <ol class="property-list attribute">
 
-        <g:if test="${attributeInstance?.characterTypeNumeric}">
+        <g:if test="${attributeInstance?.isNumeric}">
             <li class="fieldcontain">
-                <span id="characterTypeNumeric-label" class="property-label"><g:message
-                        code="attribute.characterTypeNumeric.label" default="Character Type Numeric"/></span>
+                <span id="isNumeric-label" class="property-label"><g:message
+                        code="attribute.isNumeric.label" default="Is Numeric"/></span>
 
-                <span class="property-value" aria-labelledby="characterTypeNumeric-label"><g:formatBoolean
-                        boolean="${attributeInstance?.characterTypeNumeric}"/></span>
+                <span class="property-value" aria-labelledby="isNumeric-label"><g:formatBoolean
+                        boolean="${attributeInstance?.isNumeric}"/></span>
 
             </li>
         </g:if>
 
-        <g:if test="${attributeInstance?.characterTypeText}">
+        <g:if test="${attributeInstance?.isText}">
             <li class="fieldcontain">
-                <span id="characterTypeText-label" class="property-label"><g:message
-                        code="attribute.characterTypeText.label" default="Character Type Text"/></span>
+                <span id="isText-label" class="property-label"><g:message
+                        code="attribute.isText.label" default="Is Text"/></span>
 
-                <span class="property-value" aria-labelledby="characterTypeText-label"><g:formatBoolean
-                        boolean="${attributeInstance?.characterTypeText}"/></span>
+                <span class="property-value" aria-labelledby="isText-label"><g:formatBoolean
+                        boolean="${attributeInstance?.isText}"/></span>
 
             </li>
         </g:if>
@@ -56,18 +56,6 @@
 
                 <span class="property-value" aria-labelledby="created-label"><g:formatDate
                         date="${attributeInstance?.created}"/></span>
-
-            </li>
-        </g:if>
-
-        <g:if test="${attributeInstance?.createdBy}">
-            <li class="fieldcontain">
-                <span id="createdBy-label" class="property-label"><g:message code="attribute.createdBy.label"
-                                                                             default="Created By"/></span>
-
-                <span class="property-value" aria-labelledby="createdBy-label"><g:link controller="dataSource"
-                                                                                       action="show"
-                                                                                       id="${attributeInstance?.createdBy?.id}">${attributeInstance?.createdBy?.encodeAsHTML()}</g:link></span>
 
             </li>
         </g:if>

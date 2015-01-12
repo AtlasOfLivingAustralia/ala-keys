@@ -163,7 +163,8 @@ class ImportService {
             if (attributeId != null) {
                 attribute = Attribute.get(attributeId)
             } else {
-                attribute = new Attribute(label: attributeLabel, units: attributeUnits)
+                attribute = Attribute.createNewOrChild(attributeLabel)
+                attribute.units = attributeUnits
                 if (!attribute.save()) {
                     attribute.errors.each() {
                         log.error(it)
@@ -195,7 +196,11 @@ class ImportService {
         if (isDouble(value)) {
             return Double.parseDouble(value)
         } else if (isRange(value)) {
-            return Double.parseDouble(value.split('-')[0].trim())
+            def startN = value.startsWith('-')
+            def split = (startN ? value.substring(1) : value).split('-')
+            if (split.length == 2 || (split.length == 3 && split[1].trim().length == 0)) {
+                return Double.parseDouble(split[0].trim()) * (startN ? -1 : 1)
+            }
         } else {
             return null
         }
@@ -205,7 +210,11 @@ class ImportService {
         if (isDouble(value)) {
             return Double.parseDouble(value)
         } else if (isRange(value)) {
-            return Double.parseDouble(value.split('-')[1].trim())
+            def startN = value.startsWith('-')
+            def split = (startN ? value.substring(1) : value).split('-')
+            if (split.length == 2 || (split.length == 3 && split[1].trim().length == 0)) {
+                return Double.parseDouble(split[(split.length == 3 ? 2 : 1)].trim()) * (split.length == 3 ? -1 : 1)
+            }
         } else {
             return null
         }
@@ -230,10 +239,10 @@ class ImportService {
 
     def isRange(value) {
         try {
-            def split = value.split('-')
-            if (split.length == 2) {
+            def split = (value.startsWith('-') ? value.substring(1) : value).split('-')
+            if (split.length == 2 || (split.length == 3 && split[1].trim().length == 0)) {
                 def d1 = Double.parseDouble(split[0].trim())
-                def d2 = Double.parseDouble(split[1].trim())
+                def d2 = Double.parseDouble(split[(split.length == 3 ? 2 : 1)].trim())
                 return true
             }
         } catch (e) {

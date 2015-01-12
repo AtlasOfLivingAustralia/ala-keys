@@ -8,10 +8,12 @@ class Attribute {
     String label
     String notes
     String units
-    boolean characterTypeNumeric
-    boolean characterTypeText
+    boolean isNumeric
+    boolean isText
     List textValues
     Date created = new Date()
+
+    boolean primaryy = false
 
     static constraints = {
     }
@@ -30,20 +32,29 @@ class Attribute {
 
     static hasMany = [values: Value, children: Attribute]
 
-    static hasOne = [createdBy: DataSource, parent: Attribute]
+    static hasOne = [parent: Attribute]
 
-    public def findOrCreate(label) {
+    public static def createNewOrChild(label) {
         def attributeList = Attribute.findAllByLabel(label)
         if (attributeList.size() == 0) {
-            Attribute attribute = new Attribute(label: label)
-            attribute.save()
-            return attribute
+            //Attribute.withTransaction {
+                Attribute attribute = new Attribute(label: label, primaryy: true)
+                //attribute.save()
+                return attribute
+           // }
         } else {
-            def attribute = attributeList.get(0)
-            while (attribute.parent != null) {
-                attribute = attribute.parent
+            def parent = null
+            attributeList.each() { a ->
+                if (a.parent) {
+                    parent = a.parent;
+                }
             }
-            return attribute
+
+           // Attribute.withTransaction {
+                Attribute attribute = new Attribute(label: label, primaryy: parent == null, parent: parent)
+            //    attribute.save()
+                return attribute
+            //}
         }
     }
 }

@@ -17,7 +17,7 @@ class ValuesService {
      *         "attributes" as map of Attribute label (it will merge duplicates) : [String values]
      */
     def findAllValues(params = null) {
-        def scientificNameOrLsid = params.get("scientificName")
+        def scientificNameOrLsid = params.get("q")
         def record = searchTaxonLsidService.getRecord(scientificNameOrLsid)
         def inheritedOnly = (params.containsKey("inheritedOnly") ? params.get("inheritedOnly") : false).asBoolean()
 
@@ -35,16 +35,24 @@ class ValuesService {
             def fid = Value.getForLsid(record.rankClassification.fid)
             def sid = Value.getForLsid(record.rankClassification.sid)
 
-            if (record.rankClassification.kid != record.lsid || !inheritedOnly) mergeValues(attributes, kid)
-            if (record.rankClassification.pid != record.lsid || !inheritedOnly) mergeValues(attributes, pid)
-            if (record.rankClassification.cid != record.lsid || !inheritedOnly) mergeValues(attributes, cid)
-            if (record.rankClassification.oid != record.lsid || !inheritedOnly) mergeValues(attributes, oid)
-            if (record.rankClassification.fid != record.lsid || !inheritedOnly) mergeValues(attributes, fid)
-            if (record.rankClassification.gid != record.lsid || !inheritedOnly) mergeValues(attributes, gid)
-            if (record.rankClassification.sid != record.lsid || !inheritedOnly) mergeValues(attributes, sid)
+            if (record.rankClassification.kid && (record.rankClassification.kid != record.lsid || !inheritedOnly)) mergeValues(attributes, kid)
+            if (record.rankClassification.pid && (record.rankClassification.pid != record.lsid || !inheritedOnly)) mergeValues(attributes, pid)
+            if (record.rankClassification.cid && (record.rankClassification.cid != record.lsid || !inheritedOnly)) mergeValues(attributes, cid)
+            if (record.rankClassification.oid && (record.rankClassification.oid != record.lsid || !inheritedOnly)) mergeValues(attributes, oid)
+            if (record.rankClassification.fid && (record.rankClassification.fid != record.lsid || !inheritedOnly)) mergeValues(attributes, fid)
+            if (record.rankClassification.gid && (record.rankClassification.gid != record.lsid || !inheritedOnly)) mergeValues(attributes, gid)
+            if (record.rankClassification.sid && (record.rankClassification.sid != record.lsid || !inheritedOnly)) mergeValues(attributes, sid)
         } else {
-            mergeValues(attributes, Value.findByScientificName(scientificName))
-            mergeValues(attributes, Value.findByLsid(scientificName))
+            if (scientificNameOrLsid != null) {
+                mergeValues(attributes, Value.withCriteria {
+                    taxons {
+                        or {
+                            eq("scientificName", scientificNameOrLsid)
+                        }
+                    }
+                    findByScientificName(scientificName)
+                })
+            }
         }
 
         Map m = [:]
@@ -100,14 +108,26 @@ class ValuesService {
     private def mergeValues(map, values) {
         if (values != null && values.size() > 0) {
             values.each() { Value value ->
-                def list = map.get(value.attribute.label)
-                if (list == null) {
-                    list = []
-                }
-                list.add(value.asText([noLabel: true]))
+                def txt = value.asText()
+                if (value != null && value.attribute != null && value.attribute.label != null) {
+                    def list = map.get(value.attribute.label)
+                    if (list == null) {
+                        list = []
+                    }
+                    list.add(value.asText([noLabel: true]))
 
-                map.put(value.attribute.label, list)
+                    map.put(value.attribute.label, list)
+                } else {
+                    def i = 4
+                    i = 6
+                }
             }
         }
+    }
+
+    //
+    def createOrFindValue(Taxon taxon, Attribute attribute, String text, Double min, Double max,
+                    boolean duplicateAttributeNameOk = true, boolean duplicateValueOk = false) {
+
     }
 }

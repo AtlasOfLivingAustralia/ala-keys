@@ -2,7 +2,6 @@ package au.org.ala.keys
 
 import au.org.ala.delta.editor.slotfile.model.SlotFileRepository
 import au.org.ala.delta.model.*
-import au.org.ala.keys.Attribute
 
 class ImportDeltaFileService {
     //static transactional = false
@@ -20,9 +19,9 @@ class ImportDeltaFileService {
             }
             au.org.ala.delta.model.Character deltaCharacter = dataSet.getCharacter(j)
 
-            Attribute attribute = new Attribute(createdBy: dataSource)
-            attribute.characterTypeNumeric = deltaCharacter.getCharacterType().numeric
-            attribute.characterTypeText = deltaCharacter.getCharacterType().text
+            Attribute attribute = Attribute.createNewOrChild(deltaCharacter.getDescription())
+            attribute.isNumeric = deltaCharacter.getCharacterType().numeric
+            attribute.isText = deltaCharacter.getCharacterType().text
             attribute.label = deltaCharacter.getDescription()
             attribute.notes = deltaCharacter.getNotes()
             attribute.units = deltaCharacter.getImpl().getUnits()
@@ -36,9 +35,11 @@ class ImportDeltaFileService {
             if (deltaCharacter instanceof MultiStateCharacter) {
                 def ac = (MultiStateCharacter) deltaCharacter
                 attribute.textValues = ac.getStates()
-                attribute.characterTypeText = true
+                attribute.isText = true
+                attribute.isNumeric = false
             } else {
-                attribute.characterTypeNumeric = true
+                attribute.isText = false
+                attribute.isNumeric = true
             }
 
             for (int i = 0; i < dataSet.getAllAttributesForCharacter(deltaCharacter.getCharacterId()).size(); i++) {
@@ -54,10 +55,10 @@ class ImportDeltaFileService {
                             if (aa.getNumericValue() != null) {
                                 for (def k = 0; k < aa.getNumericValue().size(); k++) {
                                     if (k == 0 || value.min > aa.getNumericValue().get(k).getFullRange().getMinimumNumber()) {
-                                        value.min = aa.getNumericValue().get(k).getFullRange().getMinimumNumber()
+                                        value.min = aa.getNumericValue().get(k).getFullRange().getMinimumNumber().doubleValue()
                                     }
                                     if (k == 0 || value.max < aa.getNumericValue().get(k).getFullRange().getMaximumNumber()) {
-                                        value.max = aa.getNumericValue().get(k).getFullRange().getMaximumNumber()
+                                        value.max = aa.getNumericValue().get(k).getFullRange().getMaximumNumber().doubleValue()
                                     }
                                 }
                             }
@@ -72,10 +73,10 @@ class ImportDeltaFileService {
                             if (aa.getNumericValue() != null) {
                                 for (def k = 0; k < aa.getNumericValue().size(); k++) {
                                     if (k == 0 || value.min > aa.getNumericValue().get(k).getFullRange().getMinimumNumber()) {
-                                        value.min = aa.getNumericValue().get(k).getFullRange().getMinimumNumber()
+                                        value.min = aa.getNumericValue().get(k).getFullRange().getMinimumNumber().doubleValue()
                                     }
                                     if (k == 0 || value.max < aa.getNumericValue().get(k).getFullRange().getMaximumNumber()) {
-                                        value.max = aa.getNumericValue().get(k).getFullRange().getMaximumNumber()
+                                        value.max = aa.getNumericValue().get(k).getFullRange().getMaximumNumber().doubleValue()
                                     }
                                 }
                             }

@@ -48,13 +48,12 @@ class ImportLucidXmlService {
                             ["loading: feature " + i + " of " + dataset.getItems().features.multistateFeatureOrNumericFeature.size()
                              , 25 + i / dataset.getItems().features.multistateFeatureOrNumericFeature.size() * 25])
                 }
-                Attribute attribute = new Attribute()
-
                 def label = feature.representation.label.get(0).value
-                attribute.label = label
+                Attribute attribute = Attribute.createNewOrChild(label)
 
                 if (feature instanceof MultistateFeature) {
-                    attribute.characterTypeText = true
+                    attribute.isText = true
+                    attribute.isNumeric = false
                     attribute.textValues = []
                     feature.states.state.each() { state ->
                         attribute.textValues.add(state.representation.label.get(0).value)
@@ -62,7 +61,8 @@ class ImportLucidXmlService {
                         stateFeatures.put(state.id, feature.id)
                     }
                 } else if (feature instanceof NumericFeature) {
-                    attribute.characterTypeNumeric = true
+                    attribute.isText = false
+                    attribute.isNumeric = true
                     def unitPrefix = ""
                     if (feature.unitPrefix?.label?.size() > 0) {
                         feature.unitPrefix.label.get(0).value
@@ -127,8 +127,8 @@ class ImportLucidXmlService {
                             }
                         }
                     } else if (data instanceof NumericData) {
-                        Double min = null
-                        Double max = null
+                        double min = null
+                        double max = null
                         data.value.each() { value ->
                             if (value instanceof NumericDataValue.Measure) {
                                 if ((value.type == NumericMeasureTypeEnum.NMIN || value.type == NumericMeasureTypeEnum.OMIN)

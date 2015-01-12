@@ -7,6 +7,8 @@ class Taxon {
     String rank
     String lsid
     Date created = new Date()
+    Integer leftt
+    Integer rightt
 
     String kid, pid, cid, oid, fid, gid, sid
     String kidName, pidName, cidName, oidName, fidName, gidName, sidName

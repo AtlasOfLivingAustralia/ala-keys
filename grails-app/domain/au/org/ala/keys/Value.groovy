@@ -3,8 +3,8 @@ package au.org.ala.keys
 class Value {
 
     String text
-    Number min
-    Number max
+    Double min
+    Double max
     Date created = new Date()
 
     static constraints = {

@@ -7,6 +7,8 @@ class UrlMappings {
             }
         }
 
+        "/ws/search/$action" (controller: "search")
+
         "/"(controller: "home")
         "500"(view: '/error')
     }

@@ -127,15 +127,17 @@ class SearchTaxonLsidService {
 
     private def applyRecord(taxon) {
 
-        def r = getRecord(taxon.scientificName)
+        def r = getRecord(filterName(taxon.scientificName))
 
         if (r != null) {
-            if (taxon.scientificName == "Gomphandra australiana") {
-                r = r
-            }
             if (r.rank == null && r.acceptedLsid != null) {
                 r = getRecord(r.acceptedLsid)
             }
+
+            try {
+                taxon.leftt = r.left.toInteger()
+                taxon.rightt = r.right.toInteger()
+            } catch (e) {}
 
             if (r.rankClass.kid != null) {
                 taxon.kid = r.rankClass.kid

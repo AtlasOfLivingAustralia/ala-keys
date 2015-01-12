@@ -2,21 +2,21 @@
 
 
 
-<div class="fieldcontain ${hasErrors(bean: attributeInstance, field: 'characterTypeNumeric', 'error')} ">
-    <label for="characterTypeNumeric">
-        <g:message code="attribute.characterTypeNumeric.label" default="Character Type Numeric"/>
+<div class="fieldcontain ${hasErrors(bean: attributeInstance, field: 'isNumeric', 'error')} ">
+    <label for="isNumeric">
+        <g:message code="attribute.characterTypeNumeric.label" default="Is Numeric"/>
 
     </label>
-    <g:checkBox name="characterTypeNumeric" value="${attributeInstance?.characterTypeNumeric}"/>
+    <g:checkBox name="isNumeric" value="${attributeInstance?.isNumeric}"/>
 
 </div>
 
-<div class="fieldcontain ${hasErrors(bean: attributeInstance, field: 'characterTypeText', 'error')} ">
-    <label for="characterTypeText">
-        <g:message code="attribute.characterTypeText.label" default="Character Type Text"/>
+<div class="fieldcontain ${hasErrors(bean: attributeInstance, field: 'isText', 'error')} ">
+    <label for="isText">
+        <g:message code="attribute.characterTypeText.label" default="Is Text"/>
 
     </label>
-    <g:checkBox name="characterTypeText" value="${attributeInstance?.characterTypeText}"/>
+    <g:checkBox name="isText" value="${attributeInstance?.istext}"/>
 
 </div>
 
@@ -27,16 +27,6 @@
     </label>
     <g:datePicker name="created" precision="day" value="${attributeInstance?.created}" default="none"
                   noSelection="['': '']"/>
-
-</div>
-
-<div class="fieldcontain ${hasErrors(bean: attributeInstance, field: 'createdBy', 'error')} ">
-    <label for="createdBy">
-        <g:message code="attribute.createdBy.label" default="Created By"/>
-
-    </label>
-    <g:select id="createdBy" name="createdBy.id" from="${au.org.ala.keys.DataSource.list()}" optionKey="id"
-              value="${attributeInstance?.createdBy?.id}" class="many-to-one" noSelection="['null': '']"/>
 
 </div>
 

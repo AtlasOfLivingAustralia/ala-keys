@@ -135,12 +135,14 @@ class AttributeController {
                 property("units")
             }
 
-            if (q != null) {
-                ilike("label", "%" + q + "%")
-            }
+            and {
+                if (q != null) {
+                    ilike("label", "%" + q + "%")
+                }
 
-            if (dataSource != null) {
-                eq("dataSource", dataSource)
+                if (dataSource != null) {
+                    eq("dataSource", dataSource)
+                }
             }
         }
 

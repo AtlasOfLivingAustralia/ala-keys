@@ -84,7 +84,8 @@ class ImportSddXmlService {
 
             //Construct one Attribute for each shared parent
             def attributeParents = [:]
-            Attribute attribute = new Attribute(createdBy: dataSource, label: 'description')
+            Attribute attribute = Attribute.createNewOrChild('description')
+            Attribute firstAttribute = attribute
             if (!attribute.save()) {
                 attribute.errors.each {
                     log.error("error saving attribute: " + it)
@@ -95,7 +96,11 @@ class ImportSddXmlService {
                 if (identificationKey.containsKey("parent")) {
                     def parent = identificationKey.get("parent")
                     if (!attributeParents.containsKey(parent)) {
-                        attribute = new Attribute(createdBy: dataSource, label: 'description')
+                        attribute = Attribute.createNewOrChild('description')
+                        if (attribute.parent == null) {
+                            attribute.parent = firstAttribute
+                            attribute.primaryy = false
+                        }
                         if (!attribute.save()) {
                             attribute.errors.each {
                                 log.error("error saving attribute: " + it)

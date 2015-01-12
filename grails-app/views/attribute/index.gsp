@@ -28,16 +28,14 @@
         <thead>
         <tr>
 
-            <g:sortableColumn property="characterTypeNumeric"
-                              title="${message(code: 'attribute.characterTypeNumeric.label', default: 'Character Type Numeric')}"/>
+            <g:sortableColumn property="isNumeric"
+                              title="${message(code: 'attribute.isNumeric.label', default: 'Is Numeric')}"/>
 
-            <g:sortableColumn property="characterTypeText"
-                              title="${message(code: 'attribute.characterTypeText.label', default: 'Character Type Text')}"/>
+            <g:sortableColumn property="isText"
+                              title="${message(code: 'attribute.isText.label', default: 'Is Text')}"/>
 
             <g:sortableColumn property="created"
                               title="${message(code: 'attribute.created.label', default: 'Created')}"/>
-
-            <th><g:message code="attribute.createdBy.label" default="Created By"/></th>
 
             <g:sortableColumn property="label" title="${message(code: 'attribute.label.label', default: 'Label')}"/>
 
@@ -50,13 +48,11 @@
             <tr class="${(i % 2) == 0 ? 'even' : 'odd'}">
 
                 <td><g:link action="show"
-                            id="${attributeInstance.id}">${fieldValue(bean: attributeInstance, field: "characterTypeNumeric")}</g:link></td>
+                            id="${attributeInstance.id}">${fieldValue(bean: attributeInstance, field: "isNumeric")}</g:link></td>
 
-                <td><g:formatBoolean boolean="${attributeInstance.characterTypeText}"/></td>
+                <td><g:formatBoolean boolean="${attributeInstance.isText}"/></td>
 
                 <td><g:formatDate date="${attributeInstance.created}"/></td>
-
-                <td>${fieldValue(bean: attributeInstance, field: "createdBy")}</td>
 
                 <td>${fieldValue(bean: attributeInstance, field: "label")}</td>
 

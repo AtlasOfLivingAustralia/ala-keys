@@ -35,6 +35,7 @@ grails.project.dependency.resolution = {
         //mavenRepo "http://repository.codehaus.org"
         //mavenRepo "http://download.java.net/maven/2/"
         //mavenRepo "http://repository.jboss.com/maven2/"
+        mavenRepo("http://maven.ala.org.au/repository")
 
     }
     dependencies {
@@ -63,6 +64,8 @@ grails.project.dependency.resolution = {
     }
 
     plugins {
+        build ":release:3.0.1"
+
         compile ":scaffolding:2.0.0"
 
         runtime ":hibernate:3.6.10.15"

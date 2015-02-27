@@ -19,6 +19,7 @@ class UploadItemController {
      *
      *{*      apiKey: "123",
      *      alaUserId: "123",
+     *      projectId: "1",
      *      data: [{*              lsid: "urn:lsid:123",
      *              attributeId: 123,
      *              attributeLabel: "text",
@@ -70,7 +71,7 @@ class UploadItemController {
             def tmp = File.createTempFile("upload", file.originalFilename)
             file.transferTo(tmp)
 
-            def dataSource = importService.importFile(tmp, file.originalFilename)
+            def dataSource = importService.importFile(Project.findById(Integer.parseInt(params.project.id)), tmp, file.originalFilename)
             redirect(controller: "dataSource", action: 'show', id: dataSource.id)
         }
     }

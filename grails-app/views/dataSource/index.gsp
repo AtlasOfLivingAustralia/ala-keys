@@ -59,6 +59,10 @@
             <g:sortableColumn params="${params}" property="filename"
                               title="${message(code: 'dataSource.filename.label', default: 'Filename')}"/>
 
+            <g:sortableColumn params="${params}" property="project"
+                              title="${message(code: 'dataSource.project.label', default: 'Project')}"/>
+
+
             <g:sortableColumn params="${params}" property="status"
                               title="${message(code: 'dataSource.status.label', default: 'Status')}"/>
 
@@ -77,6 +81,8 @@
                 <td>${fieldValue(bean: dataSourceInstance, field: "description")}</td>
 
                 <td>${fieldValue(bean: dataSourceInstance, field: "filename")}</td>
+
+                <td>${fieldValue(bean: dataSourceInstance, field: "project.name")}</td>
 
                 <td>
                     <g:if test="${dataSourceInstance?.status == 'loading'}">

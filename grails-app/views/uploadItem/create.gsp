@@ -16,6 +16,18 @@
     <h1>Upload New Document</h1>
     <g:if test="${flash.message}"><div class="message" role="status">${flash.message}</div></g:if>
     <g:uploadForm action="upload">
+
+        <div class="fieldcontain ">
+            <label for="project">
+                <g:message code="dataSource.project.label" default="Project"/>
+
+            </label>
+            <g:select id="project" name="project.id" from="${au.org.ala.keys.Project.list()}" optionKey="id"
+                      optionValue="name"
+                      value="" class="many-to-one" noSelection="['null': '']"/>
+
+        </div>
+
         <fieldset class="form">
             <input type="file" name="file"/>
         </fieldset>

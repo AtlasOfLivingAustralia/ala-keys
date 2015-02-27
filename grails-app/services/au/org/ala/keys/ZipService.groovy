@@ -20,7 +20,7 @@ class ZipService {
             count++
 
             //create new datasource
-            def ds = new DataSource(filename: ze.getName(), status: "loading")
+            def ds = new DataSource(filename: ze.getName(), status: "loading", project: dataSource.project)
             def path = ds.getFilePath()
 
             importStatusService.put(dataSource.id, ["extracting file " + count + " of " + zf.size() + " from zip", 0])

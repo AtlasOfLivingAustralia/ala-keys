@@ -23,6 +23,10 @@
     <h1>Data Summary</h1>
     <table>
         <tbody>
+        <tr class="odd">
+            <td>Projects</td>
+            <td><g:link controller="project">${projectCount}</g:link></td>
+        </tr>
         <tr class="even">
             <td>Data Sources</td>
             <td><g:link controller="dataSource">${dataSourceCount}</g:link></td>

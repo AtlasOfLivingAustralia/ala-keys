@@ -61,9 +61,9 @@ class ImportService {
      * @param file
      * @return
      */
-    def importFile(File file, String name) {
+    def importFile(Project project, File file, String name) {
 
-        def dataSource = new DataSource(filename: name, status: "loading")
+        def dataSource = new DataSource(filename: name, status: "loading", project: project)
         def path = dataSource.getFilePath()
         FileUtils.copyFile(file, new File(path))
 
@@ -138,9 +138,11 @@ class ImportService {
      */
     def importJson(json) {
 
-        def dataSource = DataSource.findByAlaUserIdAndFilename(json.get("alaUserId"), null)
+        def project = Project.findById(json.get("projectId"), null);
+
+        def dataSource = DataSource.findByProjectAndAlaUserIdAndFilename(project, json.get("alaUserId"), null)
         if (dataSource == null) {
-            dataSource = new DataSource(alaUserId: json.get("alaUserId"), status: "adhoc")
+            dataSource = new DataSource(alaUserId: json.get("alaUserId"), status: "adhoc", project: project)
             if (!dataSource.save()) {
                 dataSource.errors.each() {
                     log.error(it)

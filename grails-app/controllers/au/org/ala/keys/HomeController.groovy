@@ -12,7 +12,7 @@ class HomeController {
             order("created")
         }
 
-        [results       : results, dataSourceCount: DataSource.count(), taxonCount: Taxon.count(),
+        [results: results, projectCount: Project.count(), dataSourceCount: DataSource.count(), taxonCount: Taxon.count(),
          attributeCount: Attribute.count(), valueCount: Value.count()]
     }
 }

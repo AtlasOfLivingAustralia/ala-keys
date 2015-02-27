@@ -80,9 +80,11 @@ grails.project.dependency.resolution = {
         //runtime ":cache-headers:1.1.6"
         runtime ":rest:0.8"
 
-        compile(":ala-web-theme:[0.1,1.0)") {
+        /*compile(":ala-web-theme:0.8.1") {
             excludes "jquery", "resources", "cache", "servlet-api"
-        }
+        }*/
+        runtime ":ala-bootstrap2:2.0"
+        runtime ":ala-auth:1.1"
 
         build ":tomcat:7.0.53"
     }

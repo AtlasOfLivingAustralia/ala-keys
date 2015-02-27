@@ -8,6 +8,7 @@ grails.config.locations = ["classpath:${appName}-config.properties",
                            "classpath:${appName}-config.groovy",
                            "file:${userHome}/.grails/${appName}-config.properties",
                            "file:/data/${appName}/config/${appName}-config.groovy",
+                           "file:/data/${appName}/config/${appName}-config.properties",
 ]
 
 if (System.properties["${appName}.config.location"]) {
@@ -24,10 +25,6 @@ if (!bie.baseURL) {
 }
 if (!bie.searchPath) {
     bie.searchPath = "/search"
-}
-
-if (!headerAndFooter.baseURL) {
-    headerAndFooter.baseURL = 'http://www2.ala.org.au/commonui'
 }
 
 /******************************************************************************\

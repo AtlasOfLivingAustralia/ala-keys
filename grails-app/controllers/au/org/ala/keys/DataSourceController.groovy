@@ -50,7 +50,9 @@ class DataSourceController {
                           description    : dataSourceInstance.description, filename: dataSourceInstance.filename,
                           status         : dataSourceInstance.status,
                           valuesCount    : dataSourceInstance.values == null ? 0 : dataSourceInstance.values.size(),
-                          attributesCount: dataSourceInstance.attributes == null ? 0 : dataSourceInstance.attributes.size()]
+                          attributesCount: dataSourceInstance.attributes == null ? 0 : dataSourceInstance.attributes.size(),
+                          projectName    : dataSourceInstance.project.name,
+                          projectId      : dataSourceInstance.project.id,]
 
         [dataSource: dataSource]
     }

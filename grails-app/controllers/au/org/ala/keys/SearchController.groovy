@@ -290,6 +290,7 @@ class SearchController {
             def c = DataSource.createCriteria()
 
             list = c.list(params) {
+                createAlias('project', 'p', CriteriaSpecification.LEFT_JOIN)
                 resultTransformer(CriteriaSpecification.ALIAS_TO_ENTITY_MAP)
                 projections {
                     property("id", "id")
@@ -298,6 +299,7 @@ class SearchController {
                     property("filename", "filename")
                     property("description", "description")
                     property("status", "status")
+                    property("p.name", "projectName")
                 }
                 or {
                     ilike("filename", "%" + q + "%")
@@ -313,6 +315,41 @@ class SearchController {
         }
 
         def m = [dataSources: list, totalCount: count]
+        render m as JSON
+    }
+
+    def project() {
+        if (params.max == null) params.max = 100
+        if (params.sort == null) params.sort = "id"
+        if (params.order == null) params.order = "asc"
+
+        //query
+        def q = params.containsKey("q") ? params.q : null
+        def list
+        def count
+        if (q != null) {
+            def c = Project.createCriteria()
+
+            list = c.list(params) {
+                resultTransformer(CriteriaSpecification.ALIAS_TO_ENTITY_MAP)
+                projections {
+                    property("id", "id")
+                    property("name", "name")
+                    property("description", "description")
+                }
+                or {
+                    ilike("name", "%" + q + "%")
+                    ilike("description", "%" + q + "%")
+                }
+            }
+
+            count = list.totalCount
+        } else {
+            list = Project.list(params)
+            count = Project.count()
+        }
+
+        def m = [projects: list, totalCount: count]
         render m as JSON
     }
 }

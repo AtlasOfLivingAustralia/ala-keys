@@ -16,6 +16,8 @@ class DataSource {
     static constraints = {
     }
 
+    static belongsTo = [project: Project]
+
     static hasMany = [attributes: Attribute, values: Value]
 
     static mapping = {

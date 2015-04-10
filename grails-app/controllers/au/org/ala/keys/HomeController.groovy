@@ -3,7 +3,7 @@ package au.org.ala.keys
 class HomeController {
 
     def index() {
-        def c = DataSource.createCriteria()
+        def c = Key.createCriteria()
         def results = c {
             projections {
                 groupProperty("created")
@@ -12,7 +12,7 @@ class HomeController {
             order("created")
         }
 
-        [results: results, projectCount: Project.count(), dataSourceCount: DataSource.count(), taxonCount: Taxon.count(),
+        [results: results, projectCount: Project.count(), keyCount: Key.count(), taxonCount: Taxon.count(),
          attributeCount: Attribute.count(), valueCount: Value.count()]
     }
 }

@@ -1,15 +1,15 @@
-<%@ page import="au.org.ala.keys.DataSource" %>
+<%@ page import="au.org.ala.keys.Key" %>
 <!DOCTYPE html>
 <html>
 <head>
     <meta name="layout" content="main">
-    <g:set var="entityName" value="${message(code: 'dataSource.label', default: 'DataSource')}"/>
+    <g:set var="entityName" value="${message(code: 'key.label', default: 'Key')}"/>
     <title><g:message code="default.show.label" args="[entityName]"/></title>
     <r:require modules="progressbar"/>
 </head>
 
 <body>
-<a href="#show-dataSource" class="skip" tabindex="-1"><g:message code="default.link.skip.label"
+<a href="#show-key" class="skip" tabindex="-1"><g:message code="default.link.skip.label"
                                                                  default="Skip to content&hellip;"/></a>
 
 <div class="nav" role="navigation">
@@ -21,60 +21,50 @@
     </ul>
 </div>
 
-<div id="show-dataSource" class="content scaffold-show" role="main">
+<div id="show-key" class="content scaffold-show" role="main">
     <h1><g:message code="default.show.label" args="[entityName]"/></h1>
     <g:if test="${flash.message}">
         <div class="message" role="status">${flash.message}</div>
     </g:if>
-    <ol class="property-list dataSource">
+    <ol class="property-list key">
 
-        <g:if test="${dataSource?.alaUserId}">
+        <g:if test="${key?.created}">
             <li class="fieldcontain">
-                <span id="alaUserId-label" class="property-label"><g:message code="dataSource.alaUserId.label"
-                                                                             default="Ala User Id"/></span>
-
-                <span class="property-value" aria-labelledby="alaUserId-label">${dataSource.alaUserId}</span>
-
-            </li>
-        </g:if>
-
-        <g:if test="${dataSource?.created}">
-            <li class="fieldcontain">
-                <span id="created-label" class="property-label"><g:message code="dataSource.created.label"
+                <span id="created-label" class="property-label"><g:message code="key.created.label"
                                                                            default="Created"/></span>
 
                 <span class="property-value" aria-labelledby="created-label"><g:formatDate
-                        date="${dataSource?.created}"/></span>
+                        date="${key?.created}"/></span>
 
             </li>
         </g:if>
 
-        <g:if test="${dataSource?.description}">
+        <g:if test="${key?.description}">
             <li class="fieldcontain">
-                <span id="description-label" class="property-label"><g:message code="dataSource.description.label"
+                <span id="description-label" class="property-label"><g:message code="key.description.label"
                                                                                default="Description"/></span>
 
-                <span class="property-value" aria-labelledby="description-label">${dataSource.description}/></span>
+                <span class="property-value" aria-labelledby="description-label">${key.description}/></span>
 
             </li>
         </g:if>
 
-        <g:if test="${dataSource?.filename}">
+        <g:if test="${key?.filename}">
             <li class="fieldcontain">
-                <span id="filename-label" class="property-label"><g:message code="dataSource.filename.label"
+                <span id="filename-label" class="property-label"><g:message code="key.filename.label"
                                                                             default="Filename"/></span>
 
-                <span class="property-value" aria-labelledby="filename-label">${dataSource.filename}</span>
+                <span class="property-value" aria-labelledby="filename-label">${key.filename}</span>
 
             </li>
         </g:if>
 
-        <g:if test="${dataSource?.status}">
+        <g:if test="${key?.status}">
             <li class="fieldcontain">
-                <span id="status-label" class="property-label"><g:message code="dataSource.status.label"
+                <span id="status-label" class="property-label"><g:message code="key.status.label"
                                                                           default="Status"/></span>
 
-                <g:if test="${dataSource?.status == 'loading'}">
+                <g:if test="${key?.status == 'loading'}">
                     <span class="property-value" aria-labelledby="status-label" id="uploadFeedback">
                     </span>
 
@@ -95,7 +85,7 @@
 
                         function updateStatusPolling() {
 
-                            $.get("../../uploadItem/status/${dataSource.id}" + "?random=" + randomString(10), function (data) {
+                            $.get("../../uploadItem/status/${key.id}" + "?random=" + randomString(10), function (data) {
                                 console.log("Retrieving status...." + data.status + ", percentage: " + data.percentage);
                                 if (data.status == "loaded") {
                                     $('.progress .bar').attr('data-percentage', '100');
@@ -116,44 +106,44 @@
                         setTimeout("updateStatusPolling()", 1000);
                     </script>
                 </g:if>
-                <g:if test="${dataSource?.status != 'loading'}">
-                    <span class="property-value" aria-labelledby="status-label">${dataSource.status}</span>
+                <g:if test="${key?.status != 'loading'}">
+                    <span class="property-value" aria-labelledby="status-label">${key.status}</span>
                 </g:if>
 
             </li>
-            <g:if test="${dataSource?.status == 'loading'}">
+            <g:if test="${key?.status == 'loading'}">
                 <div id="progressBar" class="progress progress-info" style="margin-top:20px;">
                     <div class="bar" data-percentage="0"></div>
                 </div>
             </g:if>
         </g:if>
 
-        <g:if test="${dataSource?.attributesCount}">
+        <g:if test="${key?.attributesCount}">
             <li class="fieldcontain">
-                <span id="attributes-label" class="property-label"><g:message code="dataSource.attributes.label"
+                <span id="attributes-label" class="property-label"><g:message code="key.attributes.label"
                                                                               default="Attributes"/></span>
                 <span class="property-value" aria-labelledby="attributes-label"><g:link controller="attribute"
-                                                                                        action="dataSource"
-                                                                                        id="${dataSource.id}">${dataSource.attributesCount}</g:link></span>
+                                                                                        action="key"
+                                                                                        id="${key.id}">${key.attributesCount}</g:link></span>
 
             </li>
         </g:if>
 
-        <g:if test="${dataSource?.valuesCount}">
+        <g:if test="${key?.valuesCount}">
             <li class="fieldcontain">
-                <span id="values-label" class="property-label"><g:message code="dataSource.values.label"
+                <span id="values-label" class="property-label"><g:message code="key.values.label"
                                                                           default="Values"/></span>
                 <span class="property-value" aria-labelledby="values-label"><g:link controller="value"
-                                                                                    action="dataSource"
-                                                                                    id="${dataSource.id}">${dataSource.valuesCount}</g:link></span>
+                                                                                    action="key"
+                                                                                    id="${key.id}">${key.valuesCount}</g:link></span>
 
             </li>
         </g:if>
 
     </ol>
-    <g:form url="[id: dataSource.id, action: 'delete', controller: 'dataSource']" method="DELETE">
+    <g:form url="[id: key.id, action: 'delete', controller: 'key']" method="DELETE">
         <fieldset class="buttons">
-            <g:link class="edit" action="edit" resource="${dataSource.id}"><g:message code="default.button.edit.label"
+            <g:link class="edit" action="edit" resource="${key.id}"><g:message code="default.button.edit.label"
                                                                                       default="Edit"/></g:link>
             <g:actionSubmit class="delete" action="delete"
                             value="${message(code: 'default.button.delete.label', default: 'Delete')}"

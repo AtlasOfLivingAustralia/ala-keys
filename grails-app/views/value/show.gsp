@@ -55,7 +55,7 @@
                 <span id="createdBy-label" class="property-label"><g:message code="value.createdBy.label"
                                                                              default="Created By"/></span>
 
-                <span class="property-value" aria-labelledby="createdBy-label"><g:link controller="dataSource"
+                <span class="property-value" aria-labelledby="createdBy-label"><g:link controller="key"
                                                                                        action="show"
                                                                                        id="${valueInstance?.createdBy?.id}">${valueInstance?.createdBy?.encodeAsHTML()}</g:link></span>
 

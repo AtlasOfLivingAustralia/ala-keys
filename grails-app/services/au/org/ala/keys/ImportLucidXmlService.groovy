@@ -10,11 +10,14 @@ class ImportLucidXmlService {
     //static transactional = false
 
     def importStatusService
+    def taxonService
+    def attributeService
+    def keyService
 
-    def importXml(DataSource dataSource) {
+    def importXml(Key key) {
 
         try {
-            def file = new File(dataSource.getFilePath())
+            def file = new File(keyService.getFilePath(key))
             Dataset2 dataset = JAXBContext.newInstance(Dataset2.class).createUnmarshaller().unmarshal(file)
 
             if (dataset == null) {
@@ -29,12 +32,12 @@ class ImportLucidXmlService {
             //create taxon
             dataset.getItems().entities.entity.eachWithIndex() { entity, i ->
                 if (i % 10 == 0) {
-                    importStatusService.put(dataSource.id,
+                    importStatusService.put(key.id,
                             [("loading: taxon " + i + " of " + dataset.getItems().entities.entity.size()), (i / dataset.getItems().entities.entity.size() * 25)])
                 }
                 def scientificName = entity.representation.label.get(0).value
 
-                def taxons = Taxon.findOrCreate(scientificName)
+                def taxons = taxonService.get(scientificName)
 
                 taxons.each() { taxon ->
                     entities.put(entity.id, taxon)
@@ -44,16 +47,17 @@ class ImportLucidXmlService {
             //create attributes
             dataset.getItems().features.multistateFeatureOrNumericFeature.eachWithIndex() { feature, i ->
                 if (i % 5 == 0) {
-                    importStatusService.put(dataSource.id,
+                    importStatusService.put(key.id,
                             ["loading: feature " + i + " of " + dataset.getItems().features.multistateFeatureOrNumericFeature.size()
                              , 25 + i / dataset.getItems().features.multistateFeatureOrNumericFeature.size() * 25])
                 }
                 def label = feature.representation.label.get(0).value
-                Attribute attribute = Attribute.createNewOrChild(label)
+                Attribute attribute = attributeService.create(label)
+                attribute.key = key
 
                 if (feature instanceof MultistateFeature) {
-                    attribute.isText = true
-                    attribute.isNumeric = false
+                    attribute.text = true
+                    attribute.numeric = false
                     attribute.textValues = []
                     feature.states.state.each() { state ->
                         attribute.textValues.add(state.representation.label.get(0).value)
@@ -61,8 +65,8 @@ class ImportLucidXmlService {
                         stateFeatures.put(state.id, feature.id)
                     }
                 } else if (feature instanceof NumericFeature) {
-                    attribute.isText = false
-                    attribute.isNumeric = true
+                    attribute.text = false
+                    attribute.numeric = true
                     def unitPrefix = ""
                     if (feature.unitPrefix?.label?.size() > 0) {
                         feature.unitPrefix.label.get(0).value
@@ -87,7 +91,7 @@ class ImportLucidXmlService {
             //create joins
             dataset.descriptions.description.eachWithIndex() { description, i ->
                 if (i % 5 == 0) {
-                    importStatusService.put(dataSource.id,
+                    importStatusService.put(key.id,
                             ["loading: description " + i + " of " + dataset.descriptions.description.size(),
                              i / dataset.descriptions.description.size() * 25 + 50])
                 }
@@ -117,7 +121,7 @@ class ImportLucidXmlService {
                     if (data instanceof MultistateData) {
                         data.stateData.each() { stateData ->
                             stateData.state.each() { state ->
-                                Value value = new Value(createdBy: dataSource, taxon: taxon, attribute: attribute, text: states.get(state.ref))
+                                Value value = new Value(key: key, taxon: taxon, attribute: attribute, text: states.get(state.ref))
 
                                 if (!value.save()) {
                                     value.errors.each {
@@ -141,7 +145,7 @@ class ImportLucidXmlService {
                                 }
                             }
                         }
-                        Value value = new Value(createdBy: dataSource, taxon: taxon, attribute: attribute, min: min, max: max)
+                        Value value = new Value(key: key, taxon: taxon, attribute: attribute, min: min, max: max)
 
                         if (!value.save()) {
                             value.errors.each {
@@ -157,7 +161,7 @@ class ImportLucidXmlService {
             return true
         } catch (JAXBException e) {
             //e.printStackTrace()
-            //log.error("failed to import Lucid Dataset XML from: " + dataSource.getFilePath())
+            //log.error("failed to import Lucid Dataset XML from: " + key.getFilePath())
         }
 
         return false

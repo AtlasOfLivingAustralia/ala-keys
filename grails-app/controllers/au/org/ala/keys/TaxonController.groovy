@@ -1,6 +1,8 @@
 package au.org.ala.keys
 
+import grails.converters.JSON
 import grails.transaction.Transactional
+import org.hibernate.criterion.CriteriaSpecification
 
 import static grails.async.Promises.onComplete
 import static grails.async.Promises.task
@@ -16,7 +18,94 @@ class TaxonController {
 
     def index(Integer max) {
         params.max = Math.min(max ?: 10, 100)
-        respond Taxon.list(params), model: [taxonInstanceCount: Taxon.count()]
+
+        if (params.exactMatch == null) params.exactMatch = "false"
+
+        //query
+        Long[] projectIds = params.containsKey("projects") ? params.projects.split(",").collect {
+            Long.parseLong(it)
+        } : null
+        Long[] keyIds = params.containsKey("keys") ? params.keys.split(",").collect { Long.parseLong(it) } : null
+        Long[] attributeIds = params.containsKey("attributes") ? params.attributes.split(",").collect {
+            Long.parseLong(it)
+        } : null
+        Long[] valueIds = params.containsKey("values") ? params.values.split(",").collect { Long.parseLong(it) } : null
+        Long[] taxonIds = params.containsKey("taxons") ? params.taxons.split(",").collect { Long.parseLong(it) } : null
+        String[] lsids = params.containsKey("lsids") ? params.lsids.split(",") : null
+        String[] users = params.containsKey("users") ? params.users.split(",") : null
+
+        def q = params.q
+
+        def list
+        def count
+
+        def c = Taxon.createCriteria()
+
+        //filter
+        list = c.list(params) {
+
+            if (valueIds || attributeIds || keyIds || projectIds) {
+                values(CriteriaSpecification.INNER_JOIN) {
+                    groupProperty('taxon')
+
+                    if (valueIds) {
+                        'in'("id", valueIds)
+                    }
+
+                    if (attributeIds) {
+                        attribute(CriteriaSpecification.INNER_JOIN) {
+                            groupProperty('values')
+                            'in'("id", attributeIds)
+                        }
+                    }
+                }
+            }
+
+            if (keyIds) {
+                createAlias('value.key', 'key', CriteriaSpecification.LEFT_JOIN)
+                'in'("key.id", keys)
+            }
+            if (projectIds || users) {
+                createAlias('key.project', 'project', CriteriaSpecification.LEFT_JOIN)
+                if (projects) {
+                    'in'("project.id", projects)
+                }
+            }
+            if (users) {
+                createAlias('project.users', 'users', CriteriaSpecification.LEFT_JOIN)
+                'in'("user", users)
+            }
+            if (attributeIds) {
+                createAlias('value.attribute', 'attribute', CriteriaSpecification.LEFT_JOIN)
+                'in'("attribute.id", attributes)
+            }
+            if (taxonIds) {
+                'in'("id", taxonIds)
+            }
+            if (lsids) {
+                'in'("lsid", lsids)
+            }
+            if (q) {
+                or {
+                    if ("true".equalsIgnoreCase(params.exactMatch)) {
+                        eq("scientificName", q)
+                    } else {
+                        ilike("scientificName", "%" + q + "%")
+                        ilike("rank", "%" + q + "%")
+                    }
+                }
+            }
+        }
+
+        count = list.totalCount
+
+        //format output
+        if (params.containsKey("type") && "json".equalsIgnoreCase(params.type)) {
+            def map = [taxon: list, totalCount: count, params: params]
+            render map as JSON
+        } else {
+            respond list, model: [valueInstanceCount: count, query: q]
+        }
     }
 
     def show(Taxon taxonInstance) {
@@ -160,9 +249,9 @@ class TaxonController {
         def map = [:]
 
         t.values.each() { a ->
-            if (a.attribute.isText) {
+            if (a.attribute.text) {
                 map.put(a.attribute.label, a.text)
-            } else if (a.attribute.isNumeric) {
+            } else if (a.attribute.numeric) {
                 if (a.min == a.max) {
                     map.put(a.attribute.label, (a.min + " " + a.attribute.units).trim())
                 } else {

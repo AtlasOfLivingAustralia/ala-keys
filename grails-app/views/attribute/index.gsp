@@ -28,11 +28,11 @@
         <thead>
         <tr>
 
-            <g:sortableColumn property="isNumeric"
-                              title="${message(code: 'attribute.isNumeric.label', default: 'Is Numeric')}"/>
+            <g:sortableColumn property="numeric"
+                              title="${message(code: 'attribute.numeric.label', default: 'Numeric')}"/>
 
-            <g:sortableColumn property="isText"
-                              title="${message(code: 'attribute.isText.label', default: 'Is Text')}"/>
+            <g:sortableColumn property="text"
+                              title="${message(code: 'attribute.text.label', default: 'Text')}"/>
 
             <g:sortableColumn property="created"
                               title="${message(code: 'attribute.created.label', default: 'Created')}"/>
@@ -44,13 +44,14 @@
         </tr>
         </thead>
         <tbody>
+        abc(${attributeInstanceList})abc
         <g:each in="${attributeInstanceList}" status="i" var="attributeInstance">
             <tr class="${(i % 2) == 0 ? 'even' : 'odd'}">
 
                 <td><g:link action="show"
-                            id="${attributeInstance.id}">${fieldValue(bean: attributeInstance, field: "isNumeric")}</g:link></td>
+                            id="${attributeInstance.id}">${fieldValue(bean: attributeInstance, field: "numeric")}</g:link></td>
 
-                <td><g:formatBoolean boolean="${attributeInstance.isText}"/></td>
+                <td><g:formatBoolean boolean="${attributeInstance.text}"/></td>
 
                 <td><g:formatDate date="${attributeInstance.created}"/></td>
 

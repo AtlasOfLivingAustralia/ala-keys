@@ -2,13 +2,13 @@
 <html>
 <head>
     <meta name="layout" content="main">
-    <g:set var="entityName" value="${message(code: 'dataSource.label', default: 'DataSource')}"/>
+    <g:set var="entityName" value="${message(code: 'key.label', default: 'Key')}"/>
     <title><g:message code="default.list.label" args="[entityName]"/></title>
 </head>
 
 <body>
 
-<a href="#list-dataSource" class="skip" tabindex="-1"><g:message code="default.link.skip.label"
+<a href="#list-key" class="skip" tabindex="-1"><g:message code="default.link.skip.label"
                                                                  default="Skip to content&hellip;"/></a>
 
 <div class="nav" role="navigation">
@@ -19,25 +19,25 @@
     </ul>
 </div>
 
-<div id="list-dataSource" class="content scaffold-list" role="main">
+<div id="list-key" class="content scaffold-list" role="main">
     <h1><g:message code="default.list.label" args="[entityName]"/></h1>
     <g:if test="${flash.message}">
         <div class="message" role="status">${flash.message}</div>
     </g:if>
 
     <p>
-        DataSources are uploaded files, individual files (.dlt, .xml, .zip) in uploaded ZIPs, users with adhoc edits.
+        Keys are uploaded files, individual files (.dlt, .xml, .zip) in uploaded ZIPs, users with adhoc edits.
     </p>
 
-    <form class="dataSourcesSearchForm">
-        <div class="input-append" id="searchDataSources">
+    <form class="keysSearchForm">
+        <div class="input-append" id="searchKeys">
             <input class="span4" id="appendedInputButton" name="q" type="text" value="${params.q}"
                    placeholder="Search alaUserId, filename, description, status (adhoc, loaded, loading or failed)">
             <button class="btn" type="submit">Search</button>
         </div>
     </form>
 
-    <form class="dataSourcesSearchForm">
+    <form class="keysSearchForm">
         <g:if test="${params.q}">
             <button class="btn btn-primary" type="submit">Clear search</button>
         </g:if>
@@ -48,62 +48,57 @@
         <tr>
 
             <g:sortableColumn params="${params}" property="created"
-                              title="${message(code: 'dataSource.created.label', default: 'Created')}"/>
-
-            <g:sortableColumn params="${params}" property="alaUserId"
-                              title="${message(code: 'dataSource.alaUserId.label', default: 'Ala User Id')}"/>
+                              title="${message(code: 'key.created.label', default: 'Created')}"/>
 
             <g:sortableColumn params="${params}" property="description"
-                              title="${message(code: 'dataSource.description.label', default: 'Description')}"/>
+                              title="${message(code: 'key.description.label', default: 'Description')}"/>
 
             <g:sortableColumn params="${params}" property="filename"
-                              title="${message(code: 'dataSource.filename.label', default: 'Filename')}"/>
+                              title="${message(code: 'key.filename.label', default: 'Filename')}"/>
 
             <g:sortableColumn params="${params}" property="project"
-                              title="${message(code: 'dataSource.project.label', default: 'Project')}"/>
+                              title="${message(code: 'key.project.label', default: 'Project')}"/>
 
 
             <g:sortableColumn params="${params}" property="status"
-                              title="${message(code: 'dataSource.status.label', default: 'Status')}"/>
+                              title="${message(code: 'key.status.label', default: 'Status')}"/>
 
             <th></th>
         </tr>
         </thead>
         <tbody>
-        <g:each in="${dataSourceInstanceList}" status="i" var="dataSourceInstance">
+        <g:each in="${k}" status="i" var="keyInstance">
             <tr class="${(i % 2) == 0 ? 'even' : 'odd'}">
 
-                <td><g:link action="show" id="${dataSourceInstance.id}"><g:formatDate
-                        date="${dataSourceInstance.created}"/></g:link></td>
+                <td><g:link action="show" id="${keyInstance.id}"><g:formatDate
+                        date="${keyInstance.created}"/></g:link></td>
 
-                <td>${fieldValue(bean: dataSourceInstance, field: "alaUserId")}</td>
+                <td>${fieldValue(bean: keyInstance, field: "description")}</td>
 
-                <td>${fieldValue(bean: dataSourceInstance, field: "description")}</td>
+                <td>${fieldValue(bean: keyInstance, field: "filename")}</td>
 
-                <td>${fieldValue(bean: dataSourceInstance, field: "filename")}</td>
-
-                <td>${fieldValue(bean: dataSourceInstance, field: "project.name")}</td>
+                <td>${fieldValue(bean: keyInstance, field: "project.name")}</td>
 
                 <td>
-                    <g:if test="${dataSourceInstance?.status == 'loading'}">
-                        <div id="uploadFeedback_${dataSourceInstance.id}" style="clear:right;">
+                    <g:if test="${keyInstance?.status == 'loading'}">
+                        <div id="uploadFeedback_${keyInstance.id}" style="clear:right;">
                         </div>
 
                         <script>
-                            setTimeout("updateStatusPolling(${dataSourceInstance.id})", 100);
+                            setTimeout("updateStatusPolling(${keyInstance.id})", 100);
                         </script>
 
                     </g:if>
-                    <g:if test="${dataSourceInstance?.status != 'loading'}">
+                    <g:if test="${keyInstance?.status != 'loading'}">
                         <div style="clear:right;">
-                            ${dataSourceInstance?.status}
+                            ${keyInstance?.status}
                         </div>
                     </g:if>
                 </td>
 
                 <td>
-                    <g:if test="${dataSourceInstance?.filename}">
-                        <g:link action="download" id="${dataSourceInstance.id}">download original</g:link>
+                    <g:if test="${keyInstance?.filename}">
+                        <g:link action="download" id="${keyInstance.id}">download original</g:link>
                     </g:if>
                 </td>
             </tr>
@@ -112,7 +107,7 @@
     </table>
 
     <div class="pagination">
-        <g:paginate total="${dataSourceInstanceCount ?: 0}" params="${params}"/>
+        <g:paginate total="${keyInstanceCount ?: 0}" params="${params}"/>
     </div>
 </div>
 

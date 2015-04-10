@@ -11,11 +11,14 @@ class ImportSddXmlService {
     //static transactional = false
 
     def importStatusService
+    def keyService
+    def attributeService
+    def taxonService
 
-    def importXml(DataSource dataSource) {
+    def importXml(Key key) {
 
         try {
-            def file = new File(dataSource.getFilePath())
+            def file = new File(keyService.getFilePath(key))
             Datasets datasets = JAXBContext.newInstance(Datasets.class).createUnmarshaller().unmarshal(file)
 
             if (datasets == null) {
@@ -33,7 +36,7 @@ class ImportSddXmlService {
                         if (taxonList == null) {
                             taxonList = []
                         }
-                        taxonList.addAll(Taxon.findOrCreate(taxonItem.value))
+                        taxonList.addAll(taxonService.get(taxonItem.value))
                         taxonNames.put(taxon.id, taxonList)
                     }
                 }
@@ -63,16 +66,16 @@ class ImportSddXmlService {
             }
 
             //Construct one Attribute with multiple Values
-            /*Attribute attribute = new Attribute(createdBy: dataSource, label: 'description')
+            /*Attribute attribute = new Attribute(createdBy: key, label: 'description')
             def i = 0.0
             identificationKeys.each() { key, identificationKey ->
                 if (identificationKey.containsKey("taxon")) {
                     i ++
-                    importStatusService.put(dataSource.id,
+                    importStatusService.put(key.id,
                             [("loading: for taxon " + i + " of " + taxonNames.size()), (i / taxonNames.size() * 75) ])
 
                     taxonNames.get(identificationKey.get("taxon")).each() { taxon ->
-                        makeValue(dataSource, identificationKeys, taxon, attribute, identificationKey)
+                        makeValue(key, identificationKeys, taxon, attribute, identificationKey)
                     }
                 }
             }
@@ -84,7 +87,8 @@ class ImportSddXmlService {
 
             //Construct one Attribute for each shared parent
             def attributeParents = [:]
-            Attribute attribute = Attribute.createNewOrChild('description')
+            Attribute attribute = attributeService.create('description')
+            attribute.key = key
             Attribute firstAttribute = attribute
             if (!attribute.save()) {
                 attribute.errors.each {
@@ -92,14 +96,13 @@ class ImportSddXmlService {
                 }
             }
             attributeParents.put("", attribute)
-            identificationKeys.each() { key, identificationKey ->
+            identificationKeys.each() { k, identificationKey ->
                 if (identificationKey.containsKey("parent")) {
                     def parent = identificationKey.get("parent")
                     if (!attributeParents.containsKey(parent)) {
-                        attribute = Attribute.createNewOrChild('description')
+                        attribute = attributeService.create('description')
                         if (attribute.parent == null) {
                             attribute.parent = firstAttribute
-                            attribute.primaryy = false
                         }
                         if (!attribute.save()) {
                             attribute.errors.each {
@@ -112,14 +115,14 @@ class ImportSddXmlService {
                 }
             }
             def i = 0.0
-            identificationKeys.each() { key, identificationKey ->
+            identificationKeys.each() { k, identificationKey ->
                 i = i + 1
                 if (identificationKey.containsKey("taxon")) {
-                    importStatusService.put(dataSource.id,
+                    importStatusService.put(key.id,
                             [("loading: for taxon " + i + " of " + identificationKeys.size()), (i / identificationKeys.size() * 75)])
 
                     taxonNames.get(identificationKey.get("taxon")).each() { taxon ->
-                        makeValueManyAttributes(dataSource, identificationKeys, taxon, attributeParents, identificationKey)
+                        makeValueManyAttributes(key, identificationKeys, taxon, attributeParents, identificationKey)
                     }
                 }
             }
@@ -127,14 +130,14 @@ class ImportSddXmlService {
             return true
         } catch (JAXBException e) {
             //e.printStackTrace()
-            //log.error("failed to import Lucid Dataset XML from: " + dataSource.getFilePath())
+            //log.error("failed to import Lucid Dataset XML from: " + key.getFilePath())
         }
 
         return false
     }
 
-    def makeValue(dataSource, identificationKeys, taxon, attribute, identificationKey) {
-        Value value = new Value(createdBy: dataSource, taxon: taxon, attribute: attribute, text: identificationKey.get("statement"))
+    def makeValue(key, identificationKeys, taxon, attribute, identificationKey) {
+        Value value = new Value(key: key, taxon: taxon, attribute: attribute, text: identificationKey.get("statement"))
         if (!value.save()) {
             value.errors.each {
                 log.error("error saving value: " + it)
@@ -142,17 +145,17 @@ class ImportSddXmlService {
         }
 
         if (identificationKey.containsKey("parent")) {
-            makeValue(dataSource, identificationKeys, taxon, attribute, identificationKeys.get(identificationKey.get("parent")))
+            makeValue(key, identificationKeys, taxon, attribute, identificationKeys.get(identificationKey.get("parent")))
         }
     }
 
-    def makeValueManyAttributes(dataSource, identificationKeys, taxon, attributeParents, identificationKey) {
+    def makeValueManyAttributes(key, identificationKeys, taxon, attributeParents, identificationKey) {
         def parent = identificationKey.get("parent")
         if (parent == null) {
             parent = ""
         }
         def attribute = attributeParents.get(parent)
-        Value value = new Value(createdBy: dataSource, taxon: taxon, attribute: attribute, text: identificationKey.get("statement"))
+        Value value = new Value(key: key, taxon: taxon, attribute: attribute, text: identificationKey.get("statement"))
         if (!value.save()) {
             value.errors.each {
                 log.error("error saving value: " + it)
@@ -161,7 +164,7 @@ class ImportSddXmlService {
 
 
         if (identificationKey.containsKey("parent")) {
-            makeValueManyAttributes(dataSource, identificationKeys, taxon, attributeParents, identificationKeys.get(identificationKey.get("parent")))
+            makeValueManyAttributes(key, identificationKeys, taxon, attributeParents, identificationKeys.get(identificationKey.get("parent")))
         }
     }
 }

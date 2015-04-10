@@ -9,32 +9,33 @@ import java.util.zip.ZipFile
 @Transactional
 class ZipService {
     def importStatusService
+    def keyService
 
-    def getDataSources(DataSource dataSource) {
+    def getKeys(Key key) {
         def sources = []
 
-        ZipFile zf = new ZipFile(dataSource.getFilePath())
+        ZipFile zf = new ZipFile(keyService.getFilePath(key))
 
         def count = 0
         zf.entries().each() { ZipEntry ze ->
             count++
 
-            //create new datasource
-            def ds = new DataSource(filename: ze.getName(), status: "loading", project: dataSource.project)
-            def path = ds.getFilePath()
+            //create new key
+            def k = new Key(filename: ze.getName(), status: "loading", project: key.project)
+            def path = keyService.getFilePath(k)
 
-            importStatusService.put(dataSource.id, ["extracting file " + count + " of " + zf.size() + " from zip", 0])
+            importStatusService.put(key.id, ["extracting file " + count + " of " + zf.size() + " from zip", 0])
 
             byte[] bytes = IOUtils.toByteArray(zf.getInputStream(ze))
             new FileOutputStream(path).write(bytes)
 
-            if (!ds.save()) {
-                ds.errors.each() {
+            if (!k.save()) {
+                k.errors.each() {
                     log.error("failed saving datasource: " + it)
                 }
             }
 
-            sources.add(ds)
+            sources.add(k)
         }
 
         return sources

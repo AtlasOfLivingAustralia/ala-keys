@@ -119,7 +119,7 @@ class SearchTaxonLsidService {
                 r = searcher.searchForRecordByLsid(name)
             }
         } catch (e) {
-            log.error("search error: " + name, e)
+            log.error(e.getMessage() + ", scientificName: " + name)
         }
 
         return r

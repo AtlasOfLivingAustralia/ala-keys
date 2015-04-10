@@ -16,93 +16,99 @@ class ImportService {
     def importDeltaFileService
     def importLucidXmlService
     def importSddXmlService
+    def importTextService
     def importStatusService
     def searchTaxonLsidService
     def zipService
     def authorisationService
+    def keyService
+    def taxonService
 
-    private def importDataSource(DataSource dataSource, boolean updateLsids = true) {
+    private def importKey(Key key, boolean updateLsids = true) {
         try {
             //create
-            if (dataSource.filename.toLowerCase().endsWith(".dlt")) {
-                importDeltaFileService.importDlt(dataSource)
-            } else if (dataSource.filename.toLowerCase().endsWith(".xml")) {
-                if (importLucidXmlService.importXml(dataSource)) {
+            if (key.filename.toLowerCase().endsWith(".dlt")) {
+                importDeltaFileService.importDlt(key)
+            } else if (key.filename.toLowerCase().endsWith(".xml")) {
+                if (importLucidXmlService.importXml(key)) {
 
-                } else if (importSddXmlService.importXml(dataSource)) {
+                } else if (importSddXmlService.importXml(key)) {
 
                 }
+            } else if (key.filename.toLowerCase().endsWith(".txt") || key.filename.toLowerCase().endsWith(".csv")) {
+                importTextService.importText(key)
+
             }
 
             //lsid lookup
             if (updateLsids) {
-                importStatusService.put(dataSource.id, ["retrieving LSIDs", 75])
+                importStatusService.put(key.id, ["retrieving LSIDs", 75])
 
                 searchTaxonLsidService.updateTaxon()
             }
 
-            dataSource.status = "loaded"
-            importStatusService.put(dataSource.id, ["loaded", 100])
+            key.status = "loaded"
+            importStatusService.put(key.id, ["loaded", 100])
 
         } catch (e) {
-            dataSource.status = "failed"
-            importStatusService.put(dataSource.id, ["failed", 0])
+            key.status = "failed"
+            importStatusService.put(key.id, ["failed", 0])
 
-            log.error("failed to import: " + dataSource.getFilePath(), e)
+            log.error("failed to import: " + keyService.getFilePath(key), e)
         }
 
         //update status
-        def i = DataSource.executeUpdate("update DataSource set status='" + dataSource.status + "' where id=" + dataSource.id)
+        def i = Key.executeUpdate("update Key set status='" + key.status + "' where id=" + key.id)
     }
 
     /**
-     * creates a new DataSource that returns immediately and runs the import in the background
+     * creates a new Key that returns immediately and runs the import in the background
      *
      * @param file
      * @return
      */
     def importFile(Project project, File file, String name) {
 
-        def dataSource = new DataSource(filename: name, status: "loading", project: project)
-        def path = dataSource.getFilePath()
+        def key = new Key(filename: name, status: "loading", project: project)
+        def path = keyService.getFilePath(key)
         FileUtils.copyFile(file, new File(path))
 
-        if (!dataSource.save(flush: true)) {
-            dataSource.errors.each() {
+        if (!key.save(flush: true)) {
+            key.errors.each() {
                 log.error("failed saving datasource: " + it)
             }
         }
 
-        importStatusService.put(dataSource.id, ["loading", 0])
+        importStatusService.put(key.id, ["loading", 0])
 
         //do other datasource creation here
-        def dataSources
-        if (dataSource.filename.toLowerCase().endsWith(".zip")) {
-            dataSources = zipService.getDataSources(dataSource)
+        def keys
+        if (key.filename.toLowerCase().endsWith(".zip")) {
+            keys = zipService.getKeys(key)
         }
 
         //thread
         def importTask = task {
-            //wait for dataSource creation from parent thread transaction
-            while (DataSource.get(dataSource.id) == null) {
+            //wait for key creation from parent thread transaction
+            while (Key.get(key.id) == null) {
                 Thread.sleep(100);
             }
 
-            if (dataSource.filename.toLowerCase().endsWith(".zip")) {
+            if (key.filename.toLowerCase().endsWith(".zip")) {
 
-                dataSources.eachWithIndex { ds, i ->
-                    importStatusService.put(dataSource.id, ["loading zipped file: " + ds.filename, i / (double) dataSources.size() * 100])
-                    importDataSource(ds, false)
+                keys.eachWithIndex { ds, i ->
+                    importStatusService.put(key.id, ["loading zipped file: " + ds.filename, i / (double) keys.size() * 100])
+                    importKey(ds, false)
                 }
 
                 searchTaxonLsidService.updateTaxon();
 
-                importStatusService.put(dataSource.id, ["loaded", 100])
+                importStatusService.put(key.id, ["loaded", 100])
 
                 //update status
-                def i = DataSource.executeUpdate("update DataSource set status='" + dataSource.status + "' where id=" + dataSource.id)
+                def i = Key.executeUpdate("update Key set status='" + key.status + "' where id=" + key.id)
             } else {
-                importDataSource(dataSource)
+                importKey(key)
             }
         }
 
@@ -112,7 +118,7 @@ class ImportService {
         }
 
 
-        return dataSource
+        return key
     }
 
     /**
@@ -140,11 +146,11 @@ class ImportService {
 
         def project = Project.findById(json.get("projectId"), null);
 
-        def dataSource = DataSource.findByProjectAndAlaUserIdAndFilename(project, json.get("alaUserId"), null)
-        if (dataSource == null) {
-            dataSource = new DataSource(alaUserId: json.get("alaUserId"), status: "adhoc", project: project)
-            if (!dataSource.save()) {
-                dataSource.errors.each() {
+        def key = Key.findByProjectAndAlaUserIdAndFilename(project, json.get("alaUserId"), null)
+        if (key == null) {
+            key = new Key(alaUserId: json.get("alaUserId"), status: "adhoc", project: project)
+            if (!key.save()) {
+                key.errors.each() {
                     log.error(it)
                 }
             }
@@ -165,7 +171,7 @@ class ImportService {
             if (attributeId != null) {
                 attribute = Attribute.get(attributeId)
             } else {
-                attribute = Attribute.createNewOrChild(attributeLabel)
+                attribute = Attribute.create(attributeLabel)
                 attribute.units = attributeUnits
                 if (!attribute.save()) {
                     attribute.errors.each() {
@@ -174,7 +180,7 @@ class ImportService {
                 }
             }
             def r = searchTaxonLsidService.getRecord(lsid)
-            def taxon = Taxon.findOrCreateWithLsid(lsid, r == null || r.rankClass == null ? null : r.rankClass.scientificName)
+            def taxon = taxonService.get(lsid, r == null || r.rankClass == null ? null : r.rankClass.scientificName)
             searchTaxonLsidService.updateTaxon(taxon)
 
             //is it a single number
@@ -182,7 +188,7 @@ class ImportService {
             def max = parseMax(value)
             def text = parseText(value)
 
-            def newValue = new Value(createdBy: dataSource, taxon: taxon, attribute: attribute, min: min, max: max, text: text)
+            def newValue = new Value(key: key, taxon: taxon, attribute: attribute, min: min, max: max, text: text)
             if (!newValue.save()) {
                 newValue.errors.each() {
                     log.error(it)

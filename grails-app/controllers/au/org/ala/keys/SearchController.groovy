@@ -16,122 +16,6 @@ class SearchController {
         render m as JSON
     }
 
-    def tree() {
-        def left = params.get("left")
-        def right = params.get("right")
-        def rank = params.get("rank")
-
-        if ("null".equals(left) || left.length() == 0) left = null
-        if ("null".equals(right) || right.length() == 0) right = null
-        if ("null".equals(rank) || rank.length() == 0) rank = null
-
-        //defaults are for Kingdoms
-        def groupName = "kidName"
-        def groupId = "kid"
-        def groupRank = "kingdom"
-        def rankCurrentName = null
-
-        def ranks = ["KINGDOM", "PHYLUM", "CLASS", "ORDER", "FAMILY", "GENUS", "SPECIES"]
-        def rankGroupId = ["kid", "pid", "cid", "oid", "fid", "gid", "sid"]
-        def rankGroupName = ["kidName", "pidName", "cidName", "oidName", "fidName", "gidName", "sidName"]
-        ranks.eachWithIndex() { rnk, i ->
-            if (rnk.equalsIgnoreCase(rank)) {
-                if (i + 1 < ranks.size()) {
-                    groupRank = ranks[i + 1]
-                    groupId = rankGroupId[i + 1]
-                    groupName = rankGroupName[i + 1]
-                    rankCurrentName = rankGroupName[i]
-                } else {
-                    groupRank = null
-                    groupId = null
-                    groupName = null
-                    rankCurrentName = null
-                }
-            }
-        }
-
-        def nodes = Taxon.withCriteria() {
-            resultTransformer(CriteriaSpecification.ALIAS_TO_ENTITY_MAP)
-            projections {
-                countDistinct("id", "count")
-                if (groupName != null) {
-                    groupProperty(groupName, "name")
-                    groupProperty(groupId, "lsid")
-                    if (rankCurrentName != null) {
-                        groupProperty(rankCurrentName, "parentName")
-                    }
-                    min("leftt", "left")
-                    max("rightt", "right")
-                } else {
-                    groupProperty("scientificName", "name")
-                    groupProperty("lsid", "name")
-                }
-            }
-            and {
-                /*or {
-                    eq("rank", groupRank)
-                    isNull("rank")
-                }*/
-
-                if (left != null && right != null) {
-                    gte("leftt", left.toInteger())
-                    lte("rightt", right.toInteger())
-                }
-            }
-        }
-
-        //check for end node
-        nodes.each() { node ->
-            if (node.count == 1) {
-                def taxons = Taxon.withCriteria() {
-                    and {
-                        if (left != null && right != null) {
-                            gte("leftt", left.toInteger())
-                            lte("rightt", right.toInteger())
-                        }
-                        if (node.name == null) {
-                            isNull(groupName)
-                        }
-                    }
-                }
-                if (taxons != null && taxons.size() == 1) {
-                    def taxon = taxons.get(0)
-                    if ((rank == null && taxon.rank == null) ||
-                            (getTaxonValue(taxon, rankGroupId) == null)) {
-                        //end
-                        node.put("taxonId", taxon.id)
-                        node.put("name", taxon.scientificName)
-                        node.put("rank", taxon.rank)
-                        node.put("lsid", taxon.lsid)
-                    }
-                }
-            }
-        }
-
-        def m = [rank: groupRank, nodes: nodes]
-        render m as JSON
-    }
-
-    def getMapOfValues(Taxon t) {
-        def map = [:]
-
-        t.values.each() { a ->
-            if (a.attribute.isText) {
-                map.put(a.attribute.label, a.text)
-            } else if (a.attribute.isNumeric) {
-                if (a.min == a.max) {
-                    map.put(a.attribute.label, (a.min + " " + a.attribute.units).trim())
-                } else {
-                    map.put(a.attribute.label, (a.min + "-" + a.max + " " + a.attribute.units).trim())
-                }
-            }
-        }
-
-        if (t.parent != null) {
-            map.putAll(getMapOfValues(t.parent))
-        }
-    }
-
     private def getTaxonValue(taxon, idColumn) {
         if ("sid".equals(idColumn)) {
             return taxon.sid
@@ -277,7 +161,7 @@ class SearchController {
         render m as JSON
     }
 
-    def dataSource() {
+    def key() {
         if (params.max == null) params.max = 100
         if (params.sort == null) params.sort = "id"
         if (params.order == null) params.order = "asc"
@@ -287,7 +171,7 @@ class SearchController {
         def list
         def count
         if (q != null) {
-            def c = DataSource.createCriteria()
+            def c = Key.createCriteria()
 
             list = c.list(params) {
                 createAlias('project', 'p', CriteriaSpecification.LEFT_JOIN)
@@ -310,11 +194,11 @@ class SearchController {
 
             count = list.totalCount
         } else {
-            list = DataSource.list(params)
-            count = DataSource.count()
+            list = Key.list(params)
+            count = Key.count()
         }
 
-        def m = [dataSources: list, totalCount: count]
+        def m = [keys: list, totalCount: count]
         render m as JSON
     }
 

@@ -6,6 +6,9 @@ class Value {
     Double min
     Double max
     Date created = new Date()
+    String createdBy
+    Date deleted
+    String deletedBy
 
     static constraints = {
         min nullable: true
@@ -13,6 +16,8 @@ class Value {
         text nullable: true
         attribute nullable: false
         taxon nullable: false
+        deleted nullable: true
+        deletedBy nullable: true
     }
 
     static mapping = {
@@ -23,20 +28,7 @@ class Value {
 
     static belongsTo = [attribute: Attribute]
 
-    static hasOne = [createdBy: DataSource, taxon: Taxon]
-
-    static def getForLsid(lsid) {
-        def values = []
-
-        if (lsid != null) {
-            def v = Taxon.findByLsid(lsid)
-            if (v != null && v.values != null) {
-                values.addAll(v.values)
-            }
-        }
-
-        return values
-    }
+    static hasOne = [key: Key, taxon: Taxon]
 
     public def asText(params) {
         def noLabel = params?.noLabel ? params.noLabel : false

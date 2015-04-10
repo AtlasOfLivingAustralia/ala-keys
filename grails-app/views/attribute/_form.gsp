@@ -2,21 +2,21 @@
 
 
 
-<div class="fieldcontain ${hasErrors(bean: attributeInstance, field: 'isNumeric', 'error')} ">
-    <label for="isNumeric">
-        <g:message code="attribute.characterTypeNumeric.label" default="Is Numeric"/>
+<div class="fieldcontain ${hasErrors(bean: attributeInstance, field: 'numeric', 'error')} ">
+    <label for="numeric">
+        <g:message code="attribute.characterTypeNumeric.label" default="Numeric"/>
 
     </label>
-    <g:checkBox name="isNumeric" value="${attributeInstance?.isNumeric}"/>
+    <g:checkBox name="numeric" value="${attributeInstance?.numeric}"/>
 
 </div>
 
-<div class="fieldcontain ${hasErrors(bean: attributeInstance, field: 'isText', 'error')} ">
-    <label for="isText">
-        <g:message code="attribute.characterTypeText.label" default="Is Text"/>
+<div class="fieldcontain ${hasErrors(bean: attributeInstance, field: 'text', 'error')} ">
+    <label for="text">
+        <g:message code="attribute.characterTypeText.label" default="Text"/>
 
     </label>
-    <g:checkBox name="isText" value="${attributeInstance?.istext}"/>
+    <g:checkBox name="text" value="${attributeInstance?.text}"/>
 
 </div>
 

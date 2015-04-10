@@ -5,6 +5,7 @@ package au.org.ala.keys
  */
 class ValuesService {
     def searchTaxonLsidService
+    def taxonService
 
     /**
      * Get all Value text for a scientificName (or LSID).
@@ -129,5 +130,18 @@ class ValuesService {
     def createOrFindValue(Taxon taxon, Attribute attribute, String text, Double min, Double max,
                     boolean duplicateAttributeNameOk = true, boolean duplicateValueOk = false) {
 
+    }
+
+    def getForLsid(lsid) {
+        def values = []
+
+        if (lsid != null) {
+            def v = taxonService.get(lsid)
+            if (v != null && v.values != null) {
+                values.addAll(v.values)
+            }
+        }
+
+        return values
     }
 }

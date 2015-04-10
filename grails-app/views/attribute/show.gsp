@@ -27,24 +27,24 @@
     </g:if>
     <ol class="property-list attribute">
 
-        <g:if test="${attributeInstance?.isNumeric}">
+        <g:if test="${attributeInstance?.numeric}">
             <li class="fieldcontain">
-                <span id="isNumeric-label" class="property-label"><g:message
-                        code="attribute.isNumeric.label" default="Is Numeric"/></span>
+                <span id="numeric-label" class="property-label"><g:message
+                        code="attribute.numeric.label" default="Numeric"/></span>
 
-                <span class="property-value" aria-labelledby="isNumeric-label"><g:formatBoolean
-                        boolean="${attributeInstance?.isNumeric}"/></span>
+                <span class="property-value" aria-labelledby="numeric-label"><g:formatBoolean
+                        boolean="${attributeInstance?.numeric}"/></span>
 
             </li>
         </g:if>
 
-        <g:if test="${attributeInstance?.isText}">
+        <g:if test="${attributeInstance?.text}">
             <li class="fieldcontain">
-                <span id="isText-label" class="property-label"><g:message
-                        code="attribute.isText.label" default="Is Text"/></span>
+                <span id="text-label" class="property-label"><g:message
+                        code="attribute.text.label" default="Text"/></span>
 
-                <span class="property-value" aria-labelledby="isText-label"><g:formatBoolean
-                        boolean="${attributeInstance?.isText}"/></span>
+                <span class="property-value" aria-labelledby="text-label"><g:formatBoolean
+                        boolean="${attributeInstance?.text}"/></span>
 
             </li>
         </g:if>

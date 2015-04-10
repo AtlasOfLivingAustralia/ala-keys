@@ -25,7 +25,7 @@
         <g:message code="value.createdBy.label" default="Created By"/>
 
     </label>
-    <g:select id="createdBy" name="createdBy.id" from="${au.org.ala.keys.DataSource.list()}" optionKey="id"
+    <g:select id="createdBy" name="createdBy.id" from="${au.org.ala.keys.Key.list()}" optionKey="id"
               value="${valueInstance?.createdBy?.id}" class="many-to-one" noSelection="['null': '']"/>
 
 </div>

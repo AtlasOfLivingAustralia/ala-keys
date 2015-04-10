@@ -21,7 +21,7 @@
 
 <div id="list-attribute" class="content scaffold-list" role="main">
     <h1><g:message code="default.list.label"
-                   args="[entityName]"/>&nbsp;for DataSource ${(dataSource.alaUserId ?: "") + ":" + (dataSource.filename ?: "")}</h1>
+                   args="[entityName]"/>&nbsp;for Key ${(key.alaUserId ?: "") + ":" + (key.filename ?: "")}</h1>
     <g:if test="${flash.message}">
         <div class="message" role="status">${flash.message}</div>
     </g:if>
@@ -65,7 +65,7 @@
     </table>
 
     <div class="pagination">
-        <g:paginate controller="value" action="dataSource" id="${dataSource.id}" total="${valueInstanceCount ?: 0}"/>
+        <g:paginate controller="value" action="key" id="${key.id}" total="${valueInstanceCount ?: 0}"/>
     </div>
 </div>
 </body>

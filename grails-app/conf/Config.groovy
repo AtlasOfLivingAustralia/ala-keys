@@ -203,6 +203,8 @@ log4j = {
             'grails.app.taglib.org.grails.plugin.resource',
             'grails.app.resourceMappers.org.grails.plugin.resource'
     debug 'au.org.ala.keys'
+    //debug 'org.hibernate.SQL'
+    //trace 'org.hibernate.type.descriptor.sql.BasicBinder'
 }
 // Uncomment and edit the following lines to start using Grails encoding & escaping improvements
 

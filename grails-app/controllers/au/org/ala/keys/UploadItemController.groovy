@@ -71,8 +71,8 @@ class UploadItemController {
             def tmp = File.createTempFile("upload", file.originalFilename)
             file.transferTo(tmp)
 
-            def dataSource = importService.importFile(Project.findById(Integer.parseInt(params.project.id)), tmp, file.originalFilename)
-            redirect(controller: "dataSource", action: 'show', id: dataSource.id)
+            def key = importService.importFile(Project.findById(Integer.parseInt(params.project.id)), tmp, file.originalFilename)
+            redirect(controller: "key", action: 'show', id: key.id)
         }
     }
 
@@ -82,7 +82,7 @@ class UploadItemController {
         def percent = 0
 
         if (info == null) {
-            stat = DataSource.get(id).status
+            stat = Key.get(id).status
             if (stat == 'loaded') {
                 percent = 100
             } else {

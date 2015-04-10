@@ -29,7 +29,7 @@
         </tr>
         <tr class="even">
             <td>Data Sources</td>
-            <td><g:link controller="dataSource">${dataSourceCount}</g:link></td>
+            <td><g:link controller="key">${keyCount}</g:link></td>
         </tr>
         <tr class="odd">
             <td>Taxon</td>
@@ -48,24 +48,16 @@
 </div>
 
 <div class="section">
-    <h1>Taxon Tree</h1>
-
-    <div id="tree_root" class="treeNode">
-        <div></div>
-    </div>
-</div>
-
-<div class="section">
     <h1>Webservices</h1>
 
     <li>
-        <h3>Search DataSources</h3>
+        <h3>Search Keys</h3>
         <ul>
-        <p>Find data sources. ws/search/dataSource</p>
+            <p>Find data sources. ws/search/key</p>
         <h4>parameters</h4>
         <table>
             <tr>
-                <td>q</td><td>optional</td><td>Search term. Searches DataSource fields; filename, alaUserId, status (status is one of; loading, loaded, failed, adhoc)</td>
+                <td>q</td><td>optional</td><td>Search term. Searches Key fields; filename, alaUserId, status (status is one of; loading, loaded, failed, adhoc)</td>
             </tr>
             <tr>
                 <td>max</td><td>optional</td><td>Max number of records to return.</td>
@@ -81,7 +73,7 @@
             </tr>
         </table>
         <h4>examples</h4>
-            <a href="ws/search/dataSource?q=loaded">ws/search/dataSource?q=loaded</a>
+            <a href="ws/search/key?q=loaded">ws/search/key?q=loaded</a>
         </ul>
     </li>
 
@@ -205,46 +197,6 @@
 
 </div>
 
-<script>
-    function expand(div) {
-        if (event != null && event.target.tagName != 'DIV') return
-
-        var url = "search/tree?left=" + (div.id == "tree_root" ? '' : div.id.split('|')[2]) + "&right=" + (div.id == "tree_root" ? '' : div.id.split('|')[3]) + "&rank=" + (div.id == "tree_root" ? '' : div.id.split('|')[1])
-        $.get(url, function (data) {
-            console.log(data)
-            for (i = 0; i < data.nodes.length; i++) {
-                var newId = data.nodes[i].lsid + "|" + data.rank + "|" + data.nodes[i].left + "|" + data.nodes[i].right
-                var bieLink = "<a href='http://bie.ala.org.au/species/" + data.nodes[i].lsid + "' target='_blank'>view in BIE</a>"
-                if (data.nodes[i].lsid == null) {
-                    bieLink = ''
-                }
-                var labelHtml = "<div onclick='expand(this.parentNode)' >+ " + data.nodes[i].name + " (" + data.nodes[i].count + ") " + bieLink + "</div>"
-                if (data.nodes[i].taxonId != undefined) {
-                    labelHtml = "<div><a href='taxon/show/" + (data.nodes[i].taxonId) + "'>" + data.nodes[i].name + " (" + data.nodes[i].rank + ") " + bieLink + "</a></div>"
-                }
-                var insert = "<div id='" + newId + "' class='treeNode'>" + labelHtml + "</div>"
-                console.log(newId)
-                div.innerHTML += insert
-            }
-            div.firstChild.onclick = function () {
-                collapse(div)
-            }
-            if (div.firstChild.firstChild != null) div.firstChild.firstChild.textContent = "-" + div.firstChild.firstChild.textContent.substring(1)
-        });
-    }
-
-    function collapse(div) {
-        while (div.firstChild != div.lastChild) {
-            div.removeChild(div.lastChild)
-        }
-        div.firstChild.onclick = function () {
-            expand(div)
-        }
-        div.firstChild.firstChild.textContent = "+" + div.firstChild.firstChild.textContent.substring(1)
-    }
-
-    expand($('#tree_root')[0]);
-</script>
 </body>
 
 </html>

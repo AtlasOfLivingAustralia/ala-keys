@@ -7,24 +7,28 @@ class ImportDeltaFileService {
     //static transactional = false
 
     def importStatusService
+    def keyService
+    def attributeService
+    def taxonService
 
-    def importDlt(DataSource dataSource) {
+    def importDlt(Key key) {
         DeltaDataSetRepository repository = new SlotFileRepository()
 
-        MutableDeltaDataSet dataSet = repository.findByName(dataSource.getFilePath(), null)
+        MutableDeltaDataSet dataSet = repository.findByName(keyService.getFilePath(key), null)
 
         for (int j = 1; j <= dataSet.getNumberOfCharacters(); j++) {
             if (j % 1 == 0) {
-                importStatusService.put(dataSource.id, ["loading: character " + j + " of " + dataSet.getNumberOfCharacters(), (j / dataSet.getNumberOfCharacters()) * 75])
+                importStatusService.put(key.id, ["loading: character " + j + " of " + dataSet.getNumberOfCharacters(), (j / dataSet.getNumberOfCharacters()) * 75])
             }
             au.org.ala.delta.model.Character deltaCharacter = dataSet.getCharacter(j)
 
-            Attribute attribute = Attribute.createNewOrChild(deltaCharacter.getDescription())
-            attribute.isNumeric = deltaCharacter.getCharacterType().numeric
-            attribute.isText = deltaCharacter.getCharacterType().text
+            Attribute attribute = attributeService.create(deltaCharacter.getDescription())
+            attribute.numeric = deltaCharacter.getCharacterType().numeric
+            attribute.text = deltaCharacter.getCharacterType().text
             attribute.label = deltaCharacter.getDescription()
             attribute.notes = deltaCharacter.getNotes()
             attribute.units = deltaCharacter.getImpl().getUnits()
+            attribute.key = key
 
             if (!attribute.save()) {
                 attribute.errors.each {
@@ -35,11 +39,11 @@ class ImportDeltaFileService {
             if (deltaCharacter instanceof MultiStateCharacter) {
                 def ac = (MultiStateCharacter) deltaCharacter
                 attribute.textValues = ac.getStates()
-                attribute.isText = true
-                attribute.isNumeric = false
+                attribute.text = true
+                attribute.numeric = false
             } else {
-                attribute.isText = false
-                attribute.isNumeric = true
+                attribute.text = false
+                attribute.numeric = true
             }
 
             for (int i = 0; i < dataSet.getAllAttributesForCharacter(deltaCharacter.getCharacterId()).size(); i++) {
@@ -50,7 +54,7 @@ class ImportDeltaFileService {
 
                     if (deltaAttribute instanceof IntegerAttribute) {
                         def aa = (IntegerAttribute) deltaAttribute
-                        def value = new Value(createdBy: dataSource, attribute: attribute)
+                        def value = new Value(key: key, attribute: attribute)
                         try {
                             if (aa.getNumericValue() != null) {
                                 for (def k = 0; k < aa.getNumericValue().size(); k++) {
@@ -68,7 +72,7 @@ class ImportDeltaFileService {
                         values << value
                     } else if (deltaAttribute instanceof RealAttribute) {
                         def aa = (RealAttribute) deltaAttribute
-                        def value = new Value(createdBy: dataSource, attribute: attribute)
+                        def value = new Value(key: key, attribute: attribute)
                         try {
                             if (aa.getNumericValue() != null) {
                                 for (def k = 0; k < aa.getNumericValue().size(); k++) {
@@ -92,7 +96,7 @@ class ImportDeltaFileService {
                                 println(attribute.label)
                                 println(attribute.notes)
                             }
-                            values << new Value(createdBy: dataSource, attribute: attribute, text: attribute.textValues[idx - 1])
+                            values << new Value(key: key, attribute: attribute, text: attribute.textValues[idx - 1])
                         }
                     } else if (deltaAttribute instanceof TextAttribute) {
                         def aa = (TextAttribute) deltaAttribute
@@ -101,12 +105,12 @@ class ImportDeltaFileService {
                             println(aa.getCharacter().label)
                             println(aa.getCharacter().notes)
                         }
-                        values << new Value(createdBy: dataSource, attribute: attribute, text: aa.getText())
+                        values << new Value(key: key, attribute: attribute, text: aa.getText())
                     }
 
                     //taxon
                     def item = deltaAttribute.getItem()
-                    def taxons = Taxon.findOrCreate(item.getItemData().getDescription())
+                    def taxons = taxonService.get(item.getItemData().getDescription())
 
                     values.each() { value ->
                         taxons.each() { taxon ->

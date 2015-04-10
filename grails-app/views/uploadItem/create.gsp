@@ -1,4 +1,4 @@
-<%@ page import="au.org.ala.keys.DataSource" %>
+<%@ page import="au.org.ala.keys.Key" %>
 <!DOCTYPE html>
 <html>
 <head>
@@ -19,7 +19,7 @@
 
         <div class="fieldcontain ">
             <label for="project">
-                <g:message code="dataSource.project.label" default="Project"/>
+                <g:message code="key.project.label" default="Project"/>
 
             </label>
             <g:select id="project" name="project.id" from="${au.org.ala.keys.Project.list()}" optionKey="id"
@@ -62,7 +62,7 @@
             </div>
         </div>
 
-        <div class="input-append" id="searchDataSources">
+        <div class="input-append" id="searchKeys">
             <button class="btn" type="submit">Search</button>
         </div>
     </form>

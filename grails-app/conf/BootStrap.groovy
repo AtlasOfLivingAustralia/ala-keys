@@ -1,6 +1,20 @@
+import au.org.ala.keys.listener.AuditListener
+import org.codehaus.groovy.grails.commons.ApplicationAttributes
+import org.grails.datastore.mapping.core.Datastore
+
 class BootStrap {
 
+    def auditService
+
     def init = { servletContext ->
+
+        // Add custom GORM event listener for ES indexing
+        def ctx = servletContext.getAttribute(ApplicationAttributes.APPLICATION_CONTEXT)
+        ctx.getBeansOfType(Datastore).values().each { Datastore d ->
+            log.info "Adding listener for datastore: ${d}"
+            ctx.addApplicationListener new AuditListener(d, auditService)
+        }
+
         Object.metaClass.trimLength = { Integer stringLength ->
 
             String trimString = delegate?.toString()

@@ -22,7 +22,7 @@
                 <g:message code="key.project.label" default="Project"/>
 
             </label>
-            <g:select id="project" name="project.id" from="${au.org.ala.keys.Project.list()}" optionKey="id"
+            <g:select id="project" name="projectId" from="${au.org.ala.keys.Project.list()}" optionKey="id"
                       optionValue="name"
                       value="" class="many-to-one" noSelection="['null': '']"/>
 

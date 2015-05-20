@@ -1,10 +1,7 @@
 package au.org.ala.keys
-
 import grails.converters.JSON
 import grails.transaction.Transactional
 import org.hibernate.criterion.CriteriaSpecification
-
-import static org.springframework.http.HttpStatus.*
 
 @Transactional(readOnly = true)
 class ValueController {
@@ -17,15 +14,15 @@ class ValueController {
         if (params.exactMatch == null) params.exactMatch = "false"
 
         //query
-        Long[] projects = params.containsKey("projects") ? params.projects.split(",").collect {
+        Long[] projectIds = params.containsKey("projects") ? params.projects.split(",").collect {
             Long.parseLong(it)
         } : null
-        Long[] keys = params.containsKey("keys") ? params.keys.split(",").collect { Long.parseLong(it) } : null
-        Long[] attributes = params.containsKey("attributes") ? params.attributes.split(",").collect {
+        Long[] keyIds = params.containsKey("keys") ? params.keys.split(",").collect { Long.parseLong(it) } : null
+        Long[] attributeIds = params.containsKey("attributes") ? params.attributes.split(",").collect {
             Long.parseLong(it)
         } : null
-        Long[] values = params.containsKey("values") ? params.values.split(",").collect { Long.parseLong(it) } : null
-        Long[] taxons = params.containsKey("taxons") ? params.taxons.split(",").collect { Long.parseLong(it) } : null
+        Long[] valueIds = params.containsKey("values") ? params.values.split(",").collect { Long.parseLong(it) } : null
+        Long[] taxonIds = params.containsKey("taxons") ? params.taxons.split(",").collect { Long.parseLong(it) } : null
         String[] lsids = params.containsKey("lsids") ? params.lsids.split(",") : null
         String[] users = params.containsKey("users") ? params.users.split(",") : null
 
@@ -41,28 +38,30 @@ class ValueController {
 
         //filter
         list = c.list(params) {
-            if (keys) {
+            if (keyIds || projectIds || users) {
                 createAlias('key', 'key', CriteriaSpecification.LEFT_JOIN)
-                'in'("key.id", keys)
+                if (keyIds) {
+                    'in'("key.id", keyIds)
+                }
             }
-            if (projects || users) {
+            if (projectIds || users) {
                 createAlias('key.project', 'project', CriteriaSpecification.LEFT_JOIN)
-                if (projects) {
-                    'in'("project.id", projects)
+                if (projectIds) {
+                    'in'("project.id", projectIds)
                 }
             }
             if (users) {
                 createAlias('project.users', 'users', CriteriaSpecification.LEFT_JOIN)
                 'in'("user", users)
             }
-            if (attributes) {
+            if (attributeIds) {
                 createAlias('attribute', 'attribute', CriteriaSpecification.LEFT_JOIN)
-                'in'("attribute.id", attributes)
+                'in'("attribute.id", attributeIds)
             }
-            if (lsids || taxons) {
+            if (lsids || taxonIds) {
                 createAlias('taxon', 'taxon', CriteriaSpecification.LEFT_JOIN)
-                if (taxons) {
-                    'in'("taxon.id", taxons)
+                if (taxonIds) {
+                    'in'("taxon.id", taxonIds)
                 }
                 if (lsids) {
                     'in'("taxon.lsid", lsids)
@@ -78,117 +77,79 @@ class ValueController {
                         }
                     }
                 }
-                println min + ":" + max
+                println min + ":" + mx
                 if (min != null && max != null) {
                     if ("true".equalsIgnoreCase(params.exactMatch)) {
                         eq("min", min)
-                        eq("max", max)
+                        eq("max", mx)
                     } else {
-                        lte("min", max)
+                        lte("min", mx)
                         gte("max", min)
                     }
                 }
             }
-            if (values) {
-                'in'("id", values)
+            if (valueIds) {
+                'in'("id", valueIds)
             }
         }
 
         count = list.totalCount
 
         //format output
-        if (params.containsKey("type") && "json".equalsIgnoreCase(params.type)) {
-            def map = [values: list, totalCount: count, params: params]
+        def map = [values: list, totalCount: count, params: params]
+        render map as JSON
+    }
+
+    @Transactional
+    def create() {
+        def p = new Value(params)
+        p.save(flush: true)
+        if (p.hasErrors()) {
+            render p.errors as JSON
+            return
+        }
+        render p as JSON
+    }
+
+    def show(Long id) {
+        def valueInstance = Value.get(id)
+        if (valueInstance == null) {
+            def map = [error: "invalid value id"]
             render map as JSON
         } else {
-            respond list, model: [valueInstanceCount: count, query: q]
+            render valueInstance as JSON
         }
-    }
-
-    def show(Value valueInstance) {
-        respond valueInstance
-    }
-
-    def create() {
-        respond new Value(params)
     }
 
     @Transactional
     def save(Value valueInstance) {
         if (valueInstance == null) {
-            notFound()
+            def map = [error: "invalid value id"]
+            render map as JSON
             return
         }
 
         if (valueInstance.hasErrors()) {
-            respond valueInstance.errors, view: 'create'
+            render valueInstance.errors as JSON
             return
         }
 
         valueInstance.save flush: true
 
-        request.withFormat {
-            form multipartForm {
-                flash.message = message(code: 'default.created.message', args: [message(code: 'value.label', default: 'Value'), valueInstance.id])
-                redirect valueInstance
-            }
-            '*' { respond valueInstance, [status: CREATED] }
-        }
-    }
-
-    def edit(Value valueInstance) {
-        respond valueInstance
-    }
-
-    @Transactional
-    def update(Value valueInstance) {
-        if (valueInstance == null) {
-            notFound()
-            return
-        }
-
-        if (valueInstance.hasErrors()) {
-            respond valueInstance.errors, view: 'edit'
-            return
-        }
-
-        valueInstance.save flush: true
-
-        request.withFormat {
-            form multipartForm {
-                flash.message = message(code: 'default.updated.message', args: [message(code: 'Value.label', default: 'Value'), valueInstance.id])
-                redirect valueInstance
-            }
-            '*' { respond valueInstance, [status: OK] }
-        }
+        render valueInstance as JSON
     }
 
     @Transactional
     def delete(Value valueInstance) {
 
         if (valueInstance == null) {
-            notFound()
+            def map = [error: "invalid value id"]
+            render map as JSON
             return
         }
 
         valueInstance.delete flush: true
 
-        request.withFormat {
-            form multipartForm {
-                flash.message = message(code: 'default.deleted.message', args: [message(code: 'Value.label', default: 'Value'), valueInstance.id])
-                redirect action: "index", method: "GET"
-            }
-            '*' { render status: NO_CONTENT }
-        }
-    }
-
-    protected void notFound() {
-        request.withFormat {
-            form multipartForm {
-                flash.message = message(code: 'default.not.found.message', args: [message(code: 'value.label', default: 'Value'), params.id])
-                redirect action: "index", method: "GET"
-            }
-            '*' { render status: NOT_FOUND }
-        }
+        render [:] as JSON
     }
 }

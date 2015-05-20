@@ -1,18 +1,22 @@
 package au.org.ala.keys
-
 import grails.converters.JSON
 import grails.transaction.Transactional
+import org.codehaus.groovy.grails.web.json.JSONArray
+import org.codehaus.groovy.grails.web.json.JSONObject
 import org.hibernate.criterion.CriteriaSpecification
-
-import static org.springframework.http.HttpStatus.*
 
 @Transactional(readOnly = true)
 class ProjectController {
 
     static allowedMethods = [save: "POST", update: "PUT", delete: "DELETE"]
 
-    def index(Integer max) {
-        params.max = Math.min(max ?: 10, 100)
+    def taxonService
+
+    def index() {
+        def max = params?.max as Integer
+        if (max == null) max = 10
+        def offset = params?.offset as Integer
+        if (offset == null) offset = 0
 
         //query
         def q = params.containsKey("q") ? params.q : null
@@ -33,9 +37,9 @@ class ProjectController {
         def c = Project.createCriteria()
 
         //filter
-        list = c.list() {
+        list = c.list {
             projections {
-                groupProperty 'id'
+                distinct 'id'
             }
 
             if (keys || attributes || values || lsids) {
@@ -78,132 +82,160 @@ class ProjectController {
             }
         }
 
-        def ids = list.subList(0, list.size())
+        def ids = list.subList(offset, offset + Math.min(list.size() - offset, max))
 
         //select filtered
         def c2 = Project.createCriteria()
-        def list2 = c2.list(params) {
-            /*resultTransformer(CriteriaSpecification.ALIAS_TO_ENTITY_MAP)
+        def list2 = c2.list() {
+            resultTransformer(CriteriaSpecification.ALIAS_TO_ENTITY_MAP)
+
+            createAlias('scopeTaxons', 'scopeTaxons', CriteriaSpecification.LEFT_JOIN)
 
             projections {
-                property("id", "id")
-                property("created", "created")
-                property("createdBy", "createdBy")
-                property("description", "description")
-                property("name", "name")
-            }*/
+                property 'id', 'id'
+                property 'name', 'name'
+                property 'description', 'description'
+                property 'imageUrl', 'imageUrl'
+                property 'geographicScope', 'geographicScope'
+                property 'created', 'created'
+
+                property 'scopeTaxons.id', 'taxonId'
+                property 'scopeTaxons.scientificName', 'taxonScientificName'
+                property 'scopeTaxons.lsid', 'taxonLsid'
+            }
 
             if (ids.size() > 0) {
                 'in'("id", ids)
             } else {
                 eq("id", -1L)
             }
+        }.groupBy {
+            it.id
+        }.collect { k, v ->
+            [id      : v[0].id, name: v[0].name, description: v[0].description,
+             imageUrl: v[0].imageUrl, geographicScope: v[0].geographicScope,
+             created : v[0].created, scopeTaxons: v.findAll { it.taxonId != null }.collect {
+                [id: it.taxonId, scientificName: it.taxonScientificName, lsid: it.taxonLsid]
+            }]
         }
-        count = list2.totalCount
 
         //format output
-        if (params.containsKey("type") && "json".equalsIgnoreCase(params.type)) {
-            def map = [projects: list2, totalCount: count, params: params]
+        def map = [projects: list2, totalCount: ids.size(), params: params]
+        render map as JSON
+    }
+
+
+    @Transactional
+    def create() {
+        def jsonArray = request.getJSON()
+
+        //allow an array of projects in the request
+        if (jsonArray instanceof JSONObject) {
+            def newJsonArray = new JSONArray()
+            newJsonArray.add(jsonArray)
+            jsonArray = newJsonArray
+        }
+
+        def list = []
+        for (int i = 0; i < jsonArray.size(); i++) {
+            def json = jsonArray.getAt(i)
+
+            def scopeTaxons
+            if (json.containsKey('scopeTaxons')) {
+                scopeTaxons = json.scopeTaxons
+                json.remove('scopeTaxons')
+            }
+
+            def p = new Project(json)
+            p.scopeTaxons = []
+            if (scopeTaxons != null) {
+                ((JSONArray) scopeTaxons).each { sn ->
+                    if (sn != null && sn.toString().length() > 0) {
+                        def taxon = taxonService.findOrCreateWithScientificName(sn)
+                        p.scopeTaxons.add(taxon)
+                    }
+                }
+            }
+            p.save(flush: true)
+            if (p.hasErrors()) {
+                render p.errors as JSON
+                return
+            }
+            list.add(p)
+        }
+
+        render list as JSON
+    }
+
+    def show(Long id) {
+        def projectInstance = Project.get(id)
+        if (projectInstance == null) {
+            def map = [error: "invalid project id"]
             render map as JSON
         } else {
-            respond list2, model: [projectInstanceCount: count, query: q]
+            render projectInstance as JSON
         }
-    }
-
-    def create() {
-        respond new Project(params)
-    }
-
-    def show(Project projectInstance) {
-        if (projectInstance == null) {
-            redirect(action: "index")
-        }
-
-        def project = [id             : projectInstance.id,
-                       alaUserId      : projectInstance.name, created: projectInstance.created,
-                       description    : projectInstance.description,
-                       attributesCount: projectInstance.keys == null ? 0 : projectInstance.keys.size()]
-
-        [project: project]
     }
 
     @Transactional
-    def save(Project projectInstance) {
+    def update() {
+        def json = request.getJSON()
+
+        def projectInstance = Project.get(json.id)
         if (projectInstance == null) {
-            notFound()
+            def map = [error: "invalid project id"]
+            render map as JSON
             return
         }
 
+        if (json.containsKey('name')) {
+            projectInstance.name = json.name
+        }
+
+        if (json.containsKey('description')) {
+            projectInstance.description = json.description
+        }
+
+        if (json.containsKey('imageUrl')) {
+            projectInstance.imageUrl = json.imageUrl
+        }
+
+        if (json.containsKey('geographicScope')) {
+            projectInstance.geographicScope = json.geographicScope
+        }
+
+        if (json.containsKey('scopeTaxons')) {
+            projectInstance.scopeTaxons = []
+            ((JSONArray) json.scopeTaxons).each { sn ->
+                if (sn != null && sn.toString().length() > 0) {
+                    def taxon = taxonService.findOrCreateWithScientificName(sn)
+                    projectInstance.scopeTaxons.add(taxon)
+                }
+            }
+        }
+
         if (projectInstance.hasErrors()) {
-            respond projectInstance.errors, view: 'create'
+            render projectInstance.errors as JSON
             return
         }
 
         projectInstance.save flush: true
 
-        request.withFormat {
-            form multipartForm {
-                flash.message = message(code: 'default.created.message', args: [message(code: 'project.label', default: 'Project'), projectInstance.id])
-                redirect projectInstance
-            }
-            '*' { respond projectInstance, [status: CREATED] }
-        }
-    }
-
-    def edit(Project projectInstance) {
-        respond projectInstance
-    }
-
-    @Transactional
-    def update(Project projectInstance) {
-        if (projectInstance == null) {
-            notFound()
-            return
-        }
-
-        if (projectInstance.hasErrors()) {
-            respond projectInstance.errors, view: 'edit'
-            return
-        }
-
-        projectInstance.save flush: true
-
-        request.withFormat {
-            form multipartForm {
-                flash.message = message(code: 'default.updated.message', args: [message(code: 'Project.label', default: 'Project'), projectInstance.id])
-                redirect projectInstance
-            }
-            '*' { respond projectInstance, [status: OK] }
-        }
+        render projectInstance as JSON
     }
 
     @Transactional
     def delete(Project projectInstance) {
 
         if (projectInstance == null) {
-            notFound()
+            def map = [error: "invalid project id"]
+            render map as JSON
             return
         }
 
         projectInstance.delete flush: true
 
-        request.withFormat {
-            form multipartForm {
-                flash.message = message(code: 'default.deleted.message', args: [message(code: 'Project.label', default: 'Project'), projectInstance.id])
-                redirect action: "index", method: "GET"
-            }
-            '*' { render status: NO_CONTENT }
-        }
-    }
-
-    protected void notFound() {
-        request.withFormat {
-            form multipartForm {
-                flash.message = message(code: 'default.not.found.message', args: [message(code: 'project.label', default: 'Project'), params.id])
-                redirect action: "index", method: "GET"
-            }
-            '*' { render status: NOT_FOUND }
-        }
+        render [:] as JSON
     }
 
 }

@@ -40,13 +40,6 @@ class ImportService {
 
             }
 
-            //lsid lookup
-            if (updateLsids) {
-                importStatusService.put(key.id, ["retrieving LSIDs", 75])
-
-                searchTaxonLsidService.updateTaxon()
-            }
-
             key.status = "loaded"
             importStatusService.put(key.id, ["loaded", 100])
 
@@ -67,9 +60,17 @@ class ImportService {
      * @param file
      * @return
      */
-    def importFile(Project project, File file, String name) {
+    def importFile(Project project, Key existingKey, File file, String name) {
 
-        def key = new Key(filename: name, status: "loading", project: project)
+        def key
+        if (existingKey == null) {
+            key = new Key(filename: name, status: "loading", project: project)
+        } else {
+            key = existingKey
+            key.filename = name
+            key.status = "loading"
+        }
+
         def path = keyService.getFilePath(key)
         FileUtils.copyFile(file, new File(path))
 
@@ -144,7 +145,7 @@ class ImportService {
      */
     def importJson(json) {
 
-        def project = Project.findById(json.get("projectId"), null);
+        def project = Project.get(json.get("projectId"), null);
 
         def key = Key.findByProjectAndAlaUserIdAndFilename(project, json.get("alaUserId"), null)
         if (key == null) {

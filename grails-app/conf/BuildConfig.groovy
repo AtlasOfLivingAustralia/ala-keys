@@ -71,5 +71,12 @@ grails.project.dependency.resolution = {
         runtime ":ala-auth:1.1"
 
         build ":tomcat:7.0.53"
+
+        compile ":quartz:1.0.2"
+        compile ':cache-ehcache:1.0.0'
+
+        compile ":jsonp:0.2"
+        compile ":build-info:1.2.8"
+
     }
 }

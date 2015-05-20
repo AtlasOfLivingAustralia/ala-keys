@@ -1,27 +1,17 @@
 package au.org.ala.keys
 
 import grails.converters.JSON
-import groovy.sql.Sql
 import org.hibernate.criterion.CriteriaSpecification
 
 import java.util.concurrent.atomic.AtomicInteger
 
-/**
- * Transforms key into couplet form for a player
- *
- * For dichotomous keys.
- * *
- */
-class PlayerController {
+class ViewController {
 
-    //set to 0 for use with keybase data only
-    def MAX_DEPTH = 0
+    def MAX_DEPTH = 8
 
     def importService
 
-    def dataSource
-
-    def index(Integer max) {
+    def text(Integer max) {
         if (params.exactMatch == null) params.exactMatch = "false"
 
         //query
@@ -37,13 +27,6 @@ class PlayerController {
         String[] lsids = params.containsKey("lsids") ? params.lsids.split(",") : null
         String[] users = params.containsKey("users") ? params.users.split(",") : null
 
-        //key_id mandatory
-        if (params.containsKey("key_id")) {
-            keys = [Long.parseLong(params.key_id)]
-        } else {
-            return null
-        }
-
         def q = params.q
 
         def list
@@ -56,21 +39,15 @@ class PlayerController {
             resultTransformer(CriteriaSpecification.ALIAS_TO_ENTITY_MAP)
 
             createAlias('key', 'key', CriteriaSpecification.LEFT_JOIN)
-            createAlias('key.scopeTaxons', 'scopeTaxons', CriteriaSpecification.LEFT_JOIN)
             createAlias('key.project', 'project', CriteriaSpecification.LEFT_JOIN)
             createAlias('attribute', 'attribute', CriteriaSpecification.LEFT_JOIN)
             createAlias('taxon', 'taxon', CriteriaSpecification.LEFT_JOIN)
 
             projections {
                 property("key.id", "key.id")
-                property("key.name", "key.name")
                 property("key.description", "key.description")
-                property("scopeTaxons.rank", "key.scopeTaxons.rank")
-                property("scopeTaxons.scientificName", "key.scopeTaxons.scientificName")
                 property("project.id", "project.id")
                 property("project.name", "project.name")
-                property("key.geographicScope", "key.geographicScope")
-                property("project.imageUrl", "project.imageUrl")
                 property("id", "id")
                 property("min", "min")
                 property("max", "max")
@@ -115,20 +92,17 @@ class PlayerController {
             }
         }
 
-        if (list.size() == 0) {
-            def map = [error: 'key not found']
-            render map as JSON
-        } else {
-            //metadata
-            final Sql sql = new Sql(dataSource)
-            def query = "select * from key_metadata where metadata = :key_id"
-            def metadataMap = [:]
-            sql.rows(query, key_id: keys[0]).each { metadataMap.put(it.metadata_idx, it.metadata_elt) }
+        count = list.totalCount
 
-            def playerMap = makePlayerMap(list, metadataMap)
+        def playerMap = makePlayerMap(list)
 
-            //format output
+        //format output
+        if (params.containsKey("type") && "json".equalsIgnoreCase(params.type)) {
             render playerMap as JSON
+        } else if (params.containsKey("type") && "json2".equalsIgnoreCase(params.type)) {
+            render list as JSON
+        } else {
+            respond list, model: [valueInstanceCount: count, query: q]
         }
     }
 
@@ -177,63 +151,62 @@ class PlayerController {
      item: null}* @param objects
      * @return
      */
-    def makePlayerMap(objects, metadata) {
+    def makePlayerMap(objects) {
         def map = [:]
 
-        def o = objects.get(0)
-
         //key
-        map.put("key_id", o.get("key.id"))
-        map.put("key_name", o.get("key.name"))
-        map.put("UID", null)
-        map.put("description", o.get("key.description"))
-        map.put("rank", o.get("key.scopeTaxons.rank"))
-        map.put("taxonomic_scope", o.get("key.scopeTaxons.scientificName"))
-        map.put("geographic_scope", o.get("key.geographicScope"))
-        map.put("notes", "")
-        map.put("owner", "")
+        map.put("key_id", 123)
+        map.put("key_name", 123)
+        map.put("UID", 123)
+        map.put("description", 123)
+        map.put("rank", 123)
+        map.put("taxonomic_scope", 123)
+        map.put("geographic_scope", 123)
+        map.put("notes", 123)
+        map.put("owner", 123)
 
         //project
         def project = [:]
-        project.put("project_id", o.get("project.id"))
-        project.put("project_name", o.get("project.name"))
-        project.put("project_icon", o.get("project.imageUrl"))
+        project.put("project_id", 123)
+        project.put("project_name", 123)
+        project.put("project_icon", 123)
         map.put("project", project)
 
         //source
-        def source = metadata
-//        source.put("author", null)
-//        source.put("publication_year", null)
-//        source.put("title", null)
-//        source.put("in_author", null)
-//        source.put("in_title", null)
-//        source.put("edition", null)
-//        source.put("journal", null)
-//        source.put("series", null)
-//        source.put("volume", null)
-//        source.put("part", null)
-//        source.put("publisher", null)
-//        source.put("place_of_publication", null)
-//        source.put("page", null)
-//        source.put("is_modified", null)
-//        source.put("url", null)
+        def source = [:]
+        source.put("author", 123)
+        source.put("publication_year", 123)
+        source.put("title", 123)
+        source.put("in_author", 123)
+        source.put("in_title", 123)
+        source.put("edition", 123)
+        source.put("journal", 123)
+        source.put("series", 123)
+        source.put("volume", 123)
+        source.put("part", 123)
+        source.put("publisher", 123)
+        source.put("place_of_publication", 123)
+        source.put("page", 123)
+        source.put("is_modified", 123)
+        source.put("url", 123)
         map.put("source", source)
 
         //taxon
         def items = [:]
-        for (Map mo : objects) {
-            if (items.get(mo.get("taxon.id")) == null) {
+        for (Map o : objects) {
+            println o.get("taxon.id")
+            if (items.get(o.get("taxon.id")) == null) {
                 def taxon = [:]
-                taxon.put("item_id", String.valueOf(mo.get("taxon.id")))
-                taxon.put("item_name", mo.get("taxon.scientificName"))
-                taxon.put("url", "http://bie.ala.org.au/species/" + mo.get("taxon.lsid"))
+                taxon.put("item_id", o.get("taxon.id"))
+                taxon.put("item_name", o.get("taxon.scientificName"))
+                taxon.put("url", "http://bie.ala.org.au/species/" + o.get("taxon.lsid"))
                 taxon.put("to_key", null)
                 taxon.put("link_to_item_id", null)
                 taxon.put("link_to_item_name", null)
                 taxon.put("link_to_url", null)
                 taxon.put("link_to_key", null)
-                taxon.put("rank", mo.get("taxon.rank"))
-                items.put(mo.get("taxon.id"), taxon)
+                taxon.put("rank", o.get("taxon.rank"))
+                items.put(o.get("taxon.id"), taxon)
             }
         }
         map.put("items", items.values())
@@ -260,7 +233,7 @@ class PlayerController {
     def orderValues(objects, parentId, position, nextAttributeLabel, depth) {
         List<Map> output = new ArrayList<Map>()
 
-
+        //get the next best attribute by taxon coverage
         def attributes = [:]
         Set attributesUniqueNames = new HashSet<String>()
         for (Map p : objects) {
@@ -277,23 +250,14 @@ class PlayerController {
                 attributes.put(key, set)
             }
         }
-
         def maxSize = 0
         def attributeId = -1
-        //(old) get the next best attribute by taxon coverage
-//        attributes.each { k, v ->
-//            if (v.size() > maxSize || (v.size() == maxSize && k < attributeId)) {
-//                attributeId = k
-//                maxSize = v.size()
-//            }
-//        }
-        //(keybase) get the next best attribute by smallest attribute id
         attributes.each { k, v ->
-            if (attributeId == -1 || k < attributeId) {
+            if (v.size() > maxSize || (v.size() == maxSize && k < attributeId)) {
                 attributeId = k
+                maxSize = v.size()
             }
         }
-
         Set taxonSet = attributes.get(attributeId)
 
         //split attribute by value description
@@ -304,8 +268,7 @@ class PlayerController {
             def value = null
             if (key == attributeId) {
                 def o = p
-                value = "description".equals(o.get("attribute.label")) ? "" : o.get("attribute.label") + ": "
-                value +=
+                value = o.get("attribute.label") + ": " +
                         (o.get("text") != null ? o.get("text") :
                                 (o.get("min") == o.get("max") ? o.get("min") : o.get("min") + " - " + o.get("max"))) +
                         " " + (o.get("attribute.units") != null ? o.get("attribute.units") : "")
@@ -325,11 +288,10 @@ class PlayerController {
             values.each { k, v ->
                 v.each { v1 ->
                     def next = [:]
-                    next.parent_id = String.valueOf(parentId)
-                    next.lead_id = String.valueOf(position.incrementAndGet())
+                    next.parent_id = parentId
+                    next.lead_id = position.incrementAndGet()
                     next.lead_text = v1.get("taxon.scientificName")
-                    //next.item = "Taxon: " + v1.get("taxon.id")
-                    next.item = String.valueOf(v1.get("taxon.id"))
+                    next.item = "Taxon: " + v1.get("taxon.id")
                     output.add(next)
                 }
             }
@@ -337,8 +299,8 @@ class PlayerController {
             //convert to list of q's for next attribute
             attributesUniqueNames.each { v ->
                 def next = [:]
-                next.parent_id = String.valueOf(parentId)
-                next.lead_id = String.valueOf(position.incrementAndGet())
+                next.parent_id = parentId
+                next.lead_id = position.incrementAndGet()
                 next.lead_text = "Question: " + v
                 next.item = null
 
@@ -346,6 +308,7 @@ class PlayerController {
 
                 //repeat using subset of objects that have the same unique attribute name
                 def list = new ArrayList<Map>()
+                println("nextAttributeLabel: " + nextAttributeLabel)
                 objects.each { obj ->
                     if (nextAttributeLabel == null || !nextAttributeLabel.equals(obj.get("attribute.label"))) {
                         list.add(obj)
@@ -358,8 +321,8 @@ class PlayerController {
             values.each { k, v ->
                 //write this one
                 def next = [:]
-                next.parent_id = String.valueOf(parentId)
-                next.lead_id = String.valueOf(position.incrementAndGet())
+                next.parent_id = parentId
+                next.lead_id = position.incrementAndGet()
                 def o = v.get(0)
                 next.lead_text = k
 
@@ -371,7 +334,7 @@ class PlayerController {
                     tx.add(a.get("taxon.id"))
                 }
                 if (tx.size() == 1) {
-                    next.item = String.valueOf(tx.first())
+                    next.item = tx.first()
 
                     output.add(next)
                 } else {

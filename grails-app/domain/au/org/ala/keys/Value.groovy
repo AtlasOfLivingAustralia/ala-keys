@@ -6,9 +6,7 @@ class Value {
     Double min
     Double max
     Date created = new Date()
-    String createdBy
-    Date deleted
-    String deletedBy
+    String imageId
 
     static constraints = {
         min nullable: true
@@ -16,8 +14,6 @@ class Value {
         text nullable: true
         attribute nullable: false
         taxon nullable: false
-        deleted nullable: true
-        deletedBy nullable: true
     }
 
     static mapping = {

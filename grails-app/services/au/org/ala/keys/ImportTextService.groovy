@@ -23,8 +23,13 @@ class ImportTextService {
         def couplets = [:]
         def reverseCouplets = [:]
 
+        def firstCoupletId = null
+
         for (int i = 0; i < csv.size(); i++) {
             String k = csv.get(i)[0]
+            if (firstCoupletId == null) {
+                firstCoupletId = k
+            }
             if (!couplets.containsKey(k)) {
                 List list = [csv.get(i)]
                 couplets.put(k, list);
@@ -57,39 +62,50 @@ class ImportTextService {
                     log.error("error saving attribute: " + it)
                 }
             }
-            attributeParents.put(key, attribute)
+            attributeParents.put(k, attribute)
         }
         int i = 0
+        def taxonMap = [:]
         taxonNames.each() { taxon, line ->
             i = i + 1
 
             importStatusService.put(key.id,
                     [("loading: for taxon " + i + " of " + taxonNames.size()), (i / taxonNames.size() * 75)])
 
-            def t = Taxon.findOrCreate(taxon)
-            makeValueManyAttributes(key, line, t, attributeParents, reverseCouplets)
+            def t = taxonService.findOrCreateWithScientificName(taxon)
+
+            taxonMap.put(taxon, t)
         }
+
+        //topDown
+        makeValueManyAttributesTopDown(firstCoupletId, key, attributeParents, couplets, taxonMap, [])
         return true
     }
 
-    def makeValueManyAttributes(key, line, taxon, attributeParents, reverseCouplets, depth = 0) {
-        if (depth > 100) {
-            log.error("depth > 100")
-            return
-        }
+    def makeValueManyAttributesTopDown(coupletId, key, attributeParents, couplets, taxons, history) {
 
-        def attribute = attributeParents.get(line[0])
-        Value value = new Value(key: key, taxon: taxon, attribute: attribute, text: line[1])
-        if (!value.save()) {
-            value.errors.each {
-                log.error("error saving value: " + it)
-            }
-        }
+        //find
+        couplets.get(coupletId).each { couplet ->
+            if (couplet[0] == coupletId) {
+                history.push(couplet)
 
-        def parents = reverseCouplets.get(line[0])
-        if (parents != null) {
-            parents.each() { parentline ->
-                makeValueManyAttributes(key, parentline, taxon, attributeParents, reverseCouplets, depth + 1)
+                if (taxons.containsKey(couplet[2])) {
+                    def taxon = taxons.get(couplet[2])
+                    //create for taxon
+                    history.each { c ->
+                        Value value = new Value(key: key, taxon: taxon, attribute: attributeParents.get(c[0]), text: c[1])
+                        if (!value.save()) {
+                            value.errors.each {
+                                log.error("error saving value: " + it)
+                            }
+                        }
+                    }
+                } else {
+                    //drill down
+                    makeValueManyAttributesTopDown(couplet[2], key, attributeParents, couplets, taxons, history)
+                }
+
+                history.pop()
             }
         }
     }

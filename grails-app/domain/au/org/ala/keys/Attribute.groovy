@@ -12,9 +12,6 @@ class Attribute {
     boolean text
     List textValues
     Date created = new Date()
-    String createdBy
-    Date deleted
-    String deletedBy
 
     static constraints = {
     }

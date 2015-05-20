@@ -13,11 +13,15 @@ class AuthorisationService {
         return 0
     }
 
-    def isValidUser() {
+    def isValidUser(projectId) {
         return true
     }
 
     def isValidAdmin() {
         return true
+    }
+
+    def getUserForUserId(userId) {
+        [email: 'test', alaId: '0', firstname: 'test', lastname: 'test', userId: '1']
     }
 }

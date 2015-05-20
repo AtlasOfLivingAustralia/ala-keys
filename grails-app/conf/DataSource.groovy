@@ -17,8 +17,6 @@ environments {
     development {
         dataSource {
             dbCreate = "update" //"create-drop" // one of 'create', 'create-drop', 'update', 'validate', ''
-            //url = "jdbc:h2:mem:devDb;MVCC=TRUE;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE"
-            //url = "jdbc:postgresql://ala-devmaps-db.vm.csiro.au/keys"
             url = "jdbc:postgresql://localhost/keys"
             username = "postgres"
             password = "postgres"

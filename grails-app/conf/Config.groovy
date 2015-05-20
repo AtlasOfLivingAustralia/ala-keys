@@ -11,6 +11,8 @@ grails.config.locations = ["classpath:${appName}-config.properties",
                            "file:/data/${appName}/config/${appName}-config.properties",
 ]
 
+app.http.header.userId = "X-ALA-userId"
+
 if (System.properties["${appName}.config.location"]) {
     grails.config.locations << "file:" + System.properties["${appName}.config.location"]
 }
@@ -125,7 +127,7 @@ grails.hibernate.cache.queries = true
 environments {
     development {
         grails.logging.jul.usebridge = true
-        grails.host = "http://localhost:8080"
+        grails.host = "http://local.ala.org.au:8080"
         grails.serverURL = "${grails.host}/${appName}"
         security.cas.appServerName = "${grails.host}"
         security.cas.contextPath = "/${appName}"

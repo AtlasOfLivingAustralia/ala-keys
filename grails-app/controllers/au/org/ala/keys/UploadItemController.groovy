@@ -61,9 +61,9 @@ class UploadItemController {
             }
             flash.message = "File cannot be empty"
 
-            redirect(action: 'create')
+            render flash as JSON
         } else {
-            if (!authorisationService.isValidUser()
+            if (!authorisationService.isValidUser(params.projectId)
                     && !authorisationService.validate(params.apiKey, params.alaUserId)) {
                 throw new RuntimeException("Invalid authorisation.")
             }
@@ -71,8 +71,17 @@ class UploadItemController {
             def tmp = File.createTempFile("upload", file.originalFilename)
             file.transferTo(tmp)
 
-            def key = importService.importFile(Project.findById(Integer.parseInt(params.project.id)), tmp, file.originalFilename)
-            redirect(controller: "key", action: 'show', id: key.id)
+            def existingKey = params.containsKey('keyId') ? Key.get(Long.parseLong(params.keyId)) : null
+
+            println "debug: projectId=" + params.projectId
+            def project = Project.get(Long.parseLong(params.projectId))
+            if (project == null) {
+                log.error("failed to find project")
+            }
+
+            def key = importService.importFile(project, existingKey, tmp, file.originalFilename)
+
+            render key as JSON
         }
     }
 

@@ -1,18 +1,13 @@
 package au.org.ala.keys
-
 import grails.converters.JSON
 import grails.transaction.Transactional
-import org.hibernate.criterion.CriteriaSpecification
-
-import static grails.async.Promises.onComplete
-import static grails.async.Promises.task
-import static org.springframework.http.HttpStatus.*
+import org.codehaus.groovy.grails.web.json.JSONArray
+import org.codehaus.groovy.grails.web.json.JSONObject
 
 @Transactional(readOnly = true)
 class TaxonController {
 
     def searchTaxonLsidService
-    def valuesService
 
     static allowedMethods = [save: "POST", update: "PUT", delete: "DELETE"]
 
@@ -45,223 +40,81 @@ class TaxonController {
         list = c.list(params) {
 
             if (valueIds || attributeIds || keyIds || projectIds) {
-                values(CriteriaSpecification.INNER_JOIN) {
-                    groupProperty('taxon')
-
-                    if (valueIds) {
-                        'in'("id", valueIds)
+                def subqueryValue = Value.where {
+                    projections {
+                        distinct 'taxon.id'
                     }
-
-                    if (attributeIds) {
-                        attribute(CriteriaSpecification.INNER_JOIN) {
-                            groupProperty('values')
-                            'in'("id", attributeIds)
+                    or {
+                        if (valueIds) {
+                            'in'("id", valueIds)
+                        }
+                        if (attributeIds || keyIds || projectIds) {
+                            if (attributeIds) {
+                                'in'("attribute.id", attributeIds)
+                            }
+                            if (keyIds || projectIds) {
+                                if (keyIds) {
+                                    'in'("key.id", keyIds)
+                                }
+                                if (projectIds) {
+                                    def subqueryProject = Key.where {
+                                        projections {
+                                            distinct 'id'
+                                        }
+                                        'in'("project.id", projectIds)
+                                    }
+                                    'in'("key.id", subqueryProject.list())
+                                }
+                            }
                         }
                     }
                 }
-            }
-
-            if (keyIds) {
-                createAlias('value.key', 'key', CriteriaSpecification.LEFT_JOIN)
-                'in'("key.id", keys)
-            }
-            if (projectIds || users) {
-                createAlias('key.project', 'project', CriteriaSpecification.LEFT_JOIN)
-                if (projects) {
-                    'in'("project.id", projects)
+                def l = subqueryValue.list()
+                if (l.size() > 0) {
+                    'in'("id", subqueryValue.list())
                 }
             }
-            if (users) {
-                createAlias('project.users', 'users', CriteriaSpecification.LEFT_JOIN)
-                'in'("user", users)
-            }
-            if (attributeIds) {
-                createAlias('value.attribute', 'attribute', CriteriaSpecification.LEFT_JOIN)
-                'in'("attribute.id", attributes)
+
+            if (q) {
+                or {
+                    ilike("scientificName", "%" + q + "%")
+                    ilike("lsid", "%" + q + "%")
+                }
             }
             if (taxonIds) {
                 'in'("id", taxonIds)
-            }
-            if (lsids) {
-                'in'("lsid", lsids)
-            }
-            if (q) {
-                or {
-                    if ("true".equalsIgnoreCase(params.exactMatch)) {
-                        eq("scientificName", q)
-                    } else {
-                        ilike("scientificName", "%" + q + "%")
-                        ilike("rank", "%" + q + "%")
-                    }
-                }
             }
         }
 
         count = list.totalCount
 
         //format output
-        if (params.containsKey("type") && "json".equalsIgnoreCase(params.type)) {
-            def map = [taxon: list, totalCount: count, params: params]
-            render map as JSON
-        } else {
-            respond list, model: [valueInstanceCount: count, query: q]
-        }
+        def map = [taxon: list, totalCount: count, params: params]
+        render map as JSON
     }
 
-    def show(Taxon taxonInstance) {
-        def inheritedValues
-        if (taxonInstance != null && taxonInstance.lsid != null) {
-            def m = [scientificName: taxonInstance.lsid, inheritedOnly: true]
-            inheritedValues = valuesService.findAllValuesAsList(m)
-        }
-
-        respond "show", model: [taxon: taxonInstance, inherited: inheritedValues]
-    }
-
-    def create() {
-        respond new Taxon(params)
-    }
-
-    def synchronized updateLsids() {
-        def importTask = task {
-            try {
-                searchTaxonLsidService.updateTaxonAll()
-            } catch (e) {
-                log.error("failed to import: " + path, e)
-            }
-        }
-
-        //continue
-        onComplete([importTask]) { List result ->
-            log.debug("finished task: " + result.get(0))
-        }
+    def updateLsids() {
+        searchTaxonLsidService.updateLsids()
 
         render(contentType: "text/json") {
             [status: "started"]
         }
     }
 
-    @Transactional
-    def save(Taxon taxonInstance) {
-        if (taxonInstance == null) {
-            notFound()
-            return
+    @Transactional(readOnly = false)
+    def setLsid() {
+        def json = request.getJSON()
+
+        if (!json instanceof JSONObject) {
+            def o = json
+            json = new JSONArray()
+            json.add(o)
         }
 
-        if (taxonInstance.hasErrors()) {
-            respond taxonInstance.errors, view: 'create'
-            return
-        }
-
-        taxonInstance.save flush: true
-
-        request.withFormat {
-            form multipartForm {
-                flash.message = message(code: 'default.created.message', args: [message(code: 'taxon.label', default: 'Taxon'), taxonInstance.id])
-                redirect taxonInstance
-            }
-            '*' { respond taxonInstance, [status: CREATED] }
+        json.each {
+            searchTaxonLsidService.setLsid(it.scientificName, it.lsid)
         }
     }
 
-    def edit(Taxon taxonInstance) {
-        respond taxonInstance
-    }
 
-    @Transactional
-    def update(Taxon taxonInstance) {
-        if (taxonInstance == null) {
-            notFound()
-            return
-        }
-
-        if (taxonInstance.hasErrors()) {
-            respond taxonInstance.errors, view: 'edit'
-            return
-        }
-
-        taxonInstance.save flush: true
-
-        request.withFormat {
-            form multipartForm {
-                flash.message = message(code: 'default.updated.message', args: [message(code: 'Taxon.label', default: 'Taxon'), taxonInstance.id])
-                redirect taxonInstance
-            }
-            '*' { respond taxonInstance, [status: OK] }
-        }
-    }
-
-    @Transactional
-    def delete(Taxon taxonInstance) {
-
-        if (taxonInstance == null) {
-            notFound()
-            return
-        }
-
-        taxonInstance.delete flush: true
-
-        request.withFormat {
-            form multipartForm {
-                flash.message = message(code: 'default.deleted.message', args: [message(code: 'Taxon.label', default: 'Taxon'), taxonInstance.id])
-                redirect action: "index", method: "GET"
-            }
-            '*' { render status: NO_CONTENT }
-        }
-    }
-
-    protected void notFound() {
-        request.withFormat {
-            form multipartForm {
-                flash.message = message(code: 'default.not.found.message', args: [message(code: 'taxon.label', default: 'Taxon'), params.id])
-                redirect action: "index", method: "GET"
-            }
-            '*' { render status: NOT_FOUND }
-        }
-    }
-
-    def search() {
-        def lsid = params.get("lsid")
-        def scientificName = params.get("scientificName")
-
-        List taxonList = {
-            if (lsid != null) {
-                Taxon.findAllByLsid(lsid)
-            } else {
-                Taxon.findAllByScientificName(scientificName)
-            }
-        }
-
-        //traverse and build
-        Map attributes = [:]
-        taxonList.each() { taxon ->
-            attributes.putAll(getMapOfValues(taxon))
-        }
-
-        Map m = [:]
-        m.put("lsid", lsid)
-        m.put("attributes", attributes)
-
-        render m
-    }
-
-    def getMapOfValues(Taxon t) {
-        def map = [:]
-
-        t.values.each() { a ->
-            if (a.attribute.text) {
-                map.put(a.attribute.label, a.text)
-            } else if (a.attribute.numeric) {
-                if (a.min == a.max) {
-                    map.put(a.attribute.label, (a.min + " " + a.attribute.units).trim())
-                } else {
-                    map.put(a.attribute.label, (a.min + "-" + a.max + " " + a.attribute.units).trim())
-                }
-            }
-        }
-
-        if (t.parent != null) {
-            map.putAll(getMapOfValues(t.parent))
-        }
-    }
 }

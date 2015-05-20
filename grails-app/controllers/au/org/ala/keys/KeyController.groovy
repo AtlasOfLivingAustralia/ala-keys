@@ -2,23 +2,19 @@ package au.org.ala.keys
 
 import grails.converters.JSON
 import grails.transaction.Transactional
-import org.grails.datastore.mapping.query.Restrictions
-import org.hibernate.Criteria
-import org.hibernate.criterion.CriteriaSpecification
-
-import javax.persistence.criteria.JoinType
-
-import static org.springframework.http.HttpStatus.*
+import org.codehaus.groovy.grails.web.json.JSONArray
+import org.hibernate.criterion.*
 
 @Transactional(readOnly = true)
 class KeyController {
 
     static allowedMethods = [save: "POST", update: "PUT", delete: "DELETE"]
 
+    def taxonService
     def keyService
 
-    def index(Integer max) {
-        params.max = Math.min(max ?: 10, 100)
+    def index() {
+        params.max = Math.min(Integer.parseInt(params.max ?: "10"), 100)
 
         //query
         def q = params.containsKey("q") ? params.q : null
@@ -40,40 +36,69 @@ class KeyController {
 
         //filter
         list = c.list(params) {
+            resultTransformer(CriteriaSpecification.ALIAS_TO_ENTITY_MAP)
+
+            projections {
+                property 'id', 'id'
+                property 'created', 'created'
+                property 'description', 'description'
+                property 'filename', 'filename'
+                property 'geographicScope', 'geographicScope'
+                property 'name', 'name'
+                property 'project.id', 'projectId'
+                property 'project.name', 'projectName'
+                property 'scopeTaxons.id', 'taxonId'
+                property 'scopeTaxons.scientificName', 'taxonScientificName'
+                property 'scopeTaxons.lsid', 'taxonLsid'
+                property 'status', 'status'
+            }
+
+
+            createAlias('scopeTaxons', 'scopeTaxons', CriteriaSpecification.LEFT_JOIN)
 
             if (projectIds) {
                 'in'("project.id", projectIds)
             }
+
+            createAlias('project', 'project', CriteriaSpecification.LEFT_JOIN)
             if (users) {
-                createAlias('project', 'project', CriteriaSpecification.LEFT_JOIN)
                 createAlias('project.users', 'users', CriteriaSpecification.LEFT_JOIN)
                 'in'("user", users)
             }
+
             if (attributeIds) {
-                attributes(CriteriaSpecification.INNER_JOIN) {
-                    groupProperty('key')
+                def subquery2 = Attribute.where {
+                    projections {
+                        distinct 'key.id'
+                    }
                     'in'("id", attributeIds)
                 }
+                'in'("id", subquery2)
             }
             if (valueIds || lsids || taxonIds) {
-                values(CriteriaSpecification.INNER_JOIN) {
-                    groupProperty('key')
+                def subquery = Value.where {
+                    projections {
+                        distinct 'key.id'
+                    }
 
                     if (valueIds) {
                         'in'("id", valueIds)
                     }
 
                     if (lsids || taxonIds) {
-                        taxon(CriteriaSpecification.INNER_JOIN) {
-                            if (lsids) {
-                                'in'('lsid', lsids)
-                            }
-                            if (taxonIds) {
-                                'in'("id", taxonIds)
+                        if (taxonIds) {
+                            'in'("taxon.id", taxonIds)
+                        }
+                        if (lsids) {
+                            taxon(CriteriaSpecification.INNER_JOIN) {
+                                if (lsids) {
+                                    'in'('lsid', lsids)
+                                }
                             }
                         }
                     }
                 }
+                'in'("id", subquery)
             }
 
             if (q) {
@@ -87,121 +112,125 @@ class KeyController {
             }
         }
 
+        //TODO: fix count (it is increased for each key with > 1 scopeTaxon
         count = list.totalCount
 
+        list = list.groupBy {
+            it.id
+        }.collect { k, v ->
+            [id      : v[0].id, name: v[0].name, description: v[0].description,
+             filename: v[0].filename, geographicScope: v[0].geographicScope, status: v[0].status,
+             created : v[0].created, scopeTaxons: v.findAll { it.taxonId != null }.collect {
+                [id: it.taxonId, scientificName: it.taxonScientificName, lsid: it.taxonLsid]
+            }]
+        }
+
         //format output
-        if (params.containsKey("type") && "json".equalsIgnoreCase(params.type)) {
-            def map = [keys: list, totalCount: count, params: params]
+        def map = [keys: list, totalCount: count, params: params]
+        render map as JSON
+    }
+
+    @Transactional
+    def create() {
+        def json = request.getJSON()
+        def scopeTaxons
+        if (json.containsKey('scopeTaxons')) {
+            scopeTaxons = json.scopeTaxons
+            json.remove('scopeTaxons')
+        }
+        def p = new Key(json)
+        p.scopeTaxons = []
+        if (scopeTaxons != null) {
+            ((JSONArray) scopeTaxons).each { sn ->
+                if (sn != null && sn.toString().length() > 0) {
+                    def taxon = taxonService.findOrCreateWithScientificName(sn)
+                    p.scopeTaxons.add(taxon)
+                }
+            }
+        }
+
+        p.save(flush: true)
+        if (p.hasErrors()) {
+            render p.errors as JSON
+            return
+        }
+        render p as JSON
+    }
+
+    def show(Long id) {
+        def keyInstance = Key.get(id)
+        if (keyInstance == null) {
+            def map = [error: "invalid key id"]
             render map as JSON
         } else {
-            respond list, model: [k: list, keyInstanceCount: count, query: q]
+            render keyInstance as JSON
         }
-    }
-
-    def show(Key keyInstance) {
-        if (keyInstance == null) {
-            redirect(action: "index")
-        }
-
-        //This is to stop the paginate using params.offset/max to calculate current step and use the offset/max attributes instead
-        params.offset = null
-        params.max = null
-
-        def key = [id             : keyInstance.id,
-                   created        : keyInstance.created,
-                   description    : keyInstance.description, filename: keyInstance.filename,
-                   status         : keyInstance.status,
-                   valuesCount    : keyInstance.values == null ? 0 : keyInstance.values.size(),
-                   attributesCount: keyInstance.attributes == null ? 0 : keyInstance.attributes.size(),
-                   projectName    : keyInstance.project.name,
-                   projectId      : keyInstance.project.id,]
-
-        [key: key]
-    }
-
-    def create() {
-        redirect([controller: "uploadItem", action: "create"])
     }
 
     @Transactional
-    def save(Key keyInstance) {
+    def update() {
+        def json = request.getJSON()
+
+        def keyInstance = Key.get(json.id)
         if (keyInstance == null) {
-            notFound()
+            def map = [error: "invalid key id"]
+            render map as JSON
             return
         }
 
+        if (json.containsKey('description')) {
+            keyInstance.description = json.description
+        }
+
+        if (json.containsKey('name')) {
+            keyInstance.name = json.name
+        }
+
+        if (json.containsKey('geographicScope')) {
+            keyInstance.geographicScope = json.geographicScope
+        }
+
+        if (json.containsKey('metadata')) {
+            keyInstance.metadata = json.metadata as Map
+        }
+
+        if (json.containsKey('scopeTaxons')) {
+            keyInstance.scopeTaxons = []
+            ((JSONArray) json.scopeTaxons).each { sn ->
+                if (sn != null && sn.toString().length() > 0) {
+                    def taxon = taxonService.findOrCreateWithScientificName(sn)
+                    keyInstance.scopeTaxons.add(taxon)
+                }
+            }
+        }
+
         if (keyInstance.hasErrors()) {
-            respond keyInstance.errors, view: 'create'
+            render keyInstance.errors as JSON
             return
         }
 
         keyInstance.save flush: true
-
-        request.withFormat {
-            form multipartForm {
-                flash.message = message(code: 'default.created.message', args: [message(code: 'key.label', default: 'Key'), keyInstance.id])
-                redirect keyInstance
-            }
-            '*' { respond keyInstance, [status: CREATED] }
-        }
-    }
-
-    def edit(Key keyInstance) {
-        respond keyInstance
-    }
-
-    @Transactional
-    def update(Key keyInstance) {
-        if (keyInstance == null) {
-            notFound()
-            return
-        }
-
         if (keyInstance.hasErrors()) {
-            respond keyInstance.errors, view: 'edit'
+            render keyInstance.errors as JSON
             return
         }
 
-        keyInstance.save flush: true
-
-        request.withFormat {
-            form multipartForm {
-                flash.message = message(code: 'default.updated.message', args: [message(code: 'key.label', default: 'Key'), keyInstance.id])
-                redirect keyInstance
-            }
-            '*' { respond keyInstance, [status: OK] }
-        }
+        render keyInstance as JSON
     }
 
     @Transactional
     def delete(Key keyInstance) {
 
         if (keyInstance == null) {
-            notFound()
+            def map = [error: "invalid key id"]
+            render map as JSON
             return
         }
 
         keyInstance.delete flush: true
 
-        request.withFormat {
-            form multipartForm {
-                flash.message = message(code: 'default.deleted.message', args: [message(code: 'key.label', default: 'Key'), keyInstance.id])
-                redirect action: "index", method: "GET"
-            }
-            '*' { render status: NO_CONTENT }
-        }
+        render [:] as JSON
     }
-
-    protected void notFound() {
-        request.withFormat {
-            form multipartForm {
-                flash.message = message(code: 'default.not.found.message', args: [message(code: 'key.label', default: 'Key'), params.id])
-                redirect action: "index", method: "GET"
-            }
-            '*' { render status: NOT_FOUND }
-        }
-    }
-
 
     def download(long id) {
         def key = Key.get(id)

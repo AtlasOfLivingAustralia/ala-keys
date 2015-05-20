@@ -48,8 +48,30 @@
 </div>
 
 <div class="section">
-    <h1>Webservices</h1>
+    <h1>Webservices (in progress)</h1>
+    <li>
+        <h3>General Search</h3>
+        <ul>
+            <p>Find records by type. Types are project, key, attribute, value, taxon</p>
+            <h4>parameters</h4>
+            <table>
+                <tr>
+                    <td>q</td><td>optional</td><td>Searches text fields with like='%q%'</td>
+                </tr>
+                <tr>
+                    <td>max</td><td>optional</td><td>Max number of records to return.</td>
+                </tr>
+                <tr>
+                    <td>offset</td><td>optional</td><td>Paging</td>
+                </tr>
+            </table>
+            <h4>examples</h4>
+            <a href="ws/search/key?q=loaded">ws/search/key?q=loaded</a>
+        </ul>
+    </li>
+    
 
+    <h1>Other webservices (may not work)</h1>
     <li>
         <h3>Search Keys</h3>
         <ul>

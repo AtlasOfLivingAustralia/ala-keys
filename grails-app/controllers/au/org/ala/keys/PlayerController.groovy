@@ -287,10 +287,11 @@ class PlayerController {
 //                maxSize = v.size()
 //            }
 //        }
-        //(keybase) get the next best attribute by smallest attribute id
+        //(keybase) get the next best attribute by largest taxon count to identify the next ordered couplet
         attributes.each { k, v ->
-            if (attributeId == -1 || k < attributeId) {
+            if (attributeId == -1 || maxSize < v.size()) {
                 attributeId = k
+                maxSize = v.size()
             }
         }
 

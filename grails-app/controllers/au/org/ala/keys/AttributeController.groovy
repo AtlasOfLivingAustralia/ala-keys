@@ -27,13 +27,6 @@ class AttributeController {
         def list
         def count
 
-        /* def v = new DetachedCriteria(Value.class).build {
-             projections {
-                 distinct "attribute.id"
-             }
-             'in'("id", valueIds)
-         }*/
-
         def c = Attribute.createCriteria()
 
         //filter
@@ -104,7 +97,10 @@ class AttributeController {
 
     @Transactional
     def create() {
-        def p = new Attribute(params)
+        def json = request.getJSON()
+
+        def p = new Attribute(json)
+
         p.save(flush: true)
         if (p.hasErrors()) {
             render p.errors as JSON
@@ -124,11 +120,26 @@ class AttributeController {
     }
 
     @Transactional
-    def save(Attribute attributeInstance) {
+    def update() {
+        def json = request.getJSON()
+
+        def attributeInstance = Attribute.get(json.id)
         if (attributeInstance == null) {
             def map = [error: "invalid attribute id"]
             render map as JSON
             return
+        }
+
+        if (json.containsKey('label')) {
+            attributeInstance.label = json.label
+        }
+
+        if (json.containsKey('notes')) {
+            attributeInstance.notes = json.notes
+        }
+
+        if (json.containsKey('units')) {
+            attributeInstance.units = json.units
         }
 
         if (attributeInstance.hasErrors()) {
@@ -137,6 +148,10 @@ class AttributeController {
         }
 
         attributeInstance.save flush: true
+        if (attributeInstance.hasErrors()) {
+            render attributeInstance.errors as JSON
+            return
+        }
 
         render attributeInstance as JSON
     }

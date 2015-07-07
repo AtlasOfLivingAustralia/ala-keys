@@ -102,7 +102,10 @@ class ValueController {
 
     @Transactional
     def create() {
-        def p = new Value(params)
+        def json = request.getJSON()
+
+        def p = new Value(json)
+
         p.save(flush: true)
         if (p.hasErrors()) {
             render p.errors as JSON
@@ -122,11 +125,26 @@ class ValueController {
     }
 
     @Transactional
-    def save(Value valueInstance) {
+    def update() {
+        def json = request.getJSON()
+
+        def valueInstance = Value.get(json.id)
         if (valueInstance == null) {
             def map = [error: "invalid value id"]
             render map as JSON
             return
+        }
+
+        if (json.containsKey('text')) {
+            valueInstance.text = json.text
+        }
+
+        if (json.containsKey('min')) {
+            valueInstance.min = json.min
+        }
+
+        if (json.containsKey('max')) {
+            valueInstance.max = json.max
         }
 
         if (valueInstance.hasErrors()) {
@@ -135,6 +153,10 @@ class ValueController {
         }
 
         valueInstance.save flush: true
+        if (valueInstance.hasErrors()) {
+            render valueInstance.errors as JSON
+            return
+        }
 
         render valueInstance as JSON
     }

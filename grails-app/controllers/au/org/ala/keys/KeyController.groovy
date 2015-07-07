@@ -103,6 +103,9 @@ class KeyController {
 
             if (q) {
                 or {
+                    ilike("name", "%" + q + "%")
+                    ilike("description", "%" + q + "%")
+                    ilike("geographicScope", "%" + q + "%")
                     ilike("filename", "%" + q + "%")
                     ilike("status", "%" + q + "%")
                 }

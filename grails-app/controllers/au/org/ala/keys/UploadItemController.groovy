@@ -10,6 +10,7 @@ class UploadItemController {
     def importStatusService
     def importService
     def authorisationService
+    def dataSource
 
     def create() {
     }

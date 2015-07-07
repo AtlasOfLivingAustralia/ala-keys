@@ -69,6 +69,10 @@ class ImportService {
             key = existingKey
             key.filename = name
             key.status = "loading"
+
+            //delete all attributes and values under this key
+            Value.executeUpdate("DELETE FROM value WHERE key_id = :key_id", [key_id: existingKey.id])
+            Attribute.executeUpdate("DELETE attribute WHERE key_id = $key_id", [key_id: existingKey.id])
         }
 
         def path = keyService.getFilePath(key)

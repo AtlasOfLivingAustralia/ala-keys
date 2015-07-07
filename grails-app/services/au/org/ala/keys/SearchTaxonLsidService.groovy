@@ -47,7 +47,7 @@ class SearchTaxonLsidService {
 
         try {
             def count = 0
-            def list = Taxon.findAllByLsidIsNull()
+            def list = Taxon.findAll()
             def total = list.size()
 
             list.eachWithIndex { taxon, idx ->

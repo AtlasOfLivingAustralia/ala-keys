@@ -75,6 +75,7 @@ class ProjectController {
                 or {
                     ilike("description", "%" + q + "%")
                     ilike("name", "%" + q + "%")
+                    ilike("geographicScope", "%" + q + "%")
                 }
             }
             if (projects) {

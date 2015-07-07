@@ -1,16 +1,12 @@
 package au.org.ala.keys
-
 import grails.converters.JSON
 import groovy.sql.Sql
 import org.hibernate.criterion.CriteriaSpecification
-
-import java.util.concurrent.atomic.AtomicInteger
-
 /**
- * Transforms key into couplet form for a player
+ * Transforms key into couplet form for a player.
  *
- * For dichotomous keys.
- * *
+ * For dichotomous keys. These are keys that are created from a single text file import.
+ *
  */
 class PlayerController {
 
@@ -113,19 +109,45 @@ class PlayerController {
             if (values) {
                 'in'("id", values)
             }
+
+            order('id')
         }
 
         if (list.size() == 0) {
             def map = [error: 'key not found']
             render map as JSON
         } else {
-            //metadata
+            //taxon to key link, within this project only
             final Sql sql = new Sql(dataSource)
-            def query = "select * from key_metadata where metadata = :key_id"
-            def metadataMap = [:]
-            sql.rows(query, key_id: keys[0]).each { metadataMap.put(it.metadata_idx, it.metadata_elt) }
+            def query = "select key_id as key_id, scientific_name from key_scopetaxons inner join taxon on taxon_id = taxon.id " +
+                    "                         inner join key on key_scopetaxons.key_id = key.id where project_id = :project" +
+                    "                         union" +
+                    "                         select value.key_id as id, " +
+                    "                         (case when count(distinct(pid)) > 1 then max(kid_name)" +
+                    "                         when count(distinct(cid)) > 1 then max(pid_name)" +
+                    "                         when count(distinct(oid)) > 1 then max(cid_name)" +
+                    "                         when count(distinct(fid)) > 1 then max(oid_name)" +
+                    "                         when count(distinct(gid)) > 1 then max(fid_name)" +
+                    "                         when count(distinct(sid)) > 1 then max(gid_name)" +
+                    "                         else max(sid_name) end) as name" +
+                    "                         from value inner join taxon on value.taxon_id = taxon.id" +
+                    "                         inner join key on key.id = value.key_id" +
+                    "                         left join key_scopetaxons on value.key_id = key_scopetaxons.key_id" +
+                    "                         where key_scopetaxons.key_id is null" +
+                    "                         and project_id = :project" +
+                    "                         group by value.key_id"
 
-            def playerMap = makePlayerMap(list, metadataMap)
+            def taxonKeyLink = [:]
+            sql.rows(query, project: list[0].getAt('project.id')).each {
+                taxonKeyLink.put(it.scientific_name, it.key_id)
+            }
+
+            //metadata
+            def query2 = "select * from key_metadata where metadata = :key_id"
+            def metadataMap = [:]
+            sql.rows(query2, key_id: keys[0]).each { metadataMap.put(it.metadata_idx, it.metadata_elt) }
+
+            def playerMap = makePlayerMap(list, metadataMap, taxonKeyLink)
 
             //format output
             render playerMap as JSON
@@ -177,7 +199,7 @@ class PlayerController {
      item: null}* @param objects
      * @return
      */
-    def makePlayerMap(objects, metadata) {
+    def makePlayerMap(objects, metadata, taxonKeyLink) {
         def map = [:]
 
         def o = objects.get(0)
@@ -202,21 +224,6 @@ class PlayerController {
 
         //source
         def source = metadata
-//        source.put("author", null)
-//        source.put("publication_year", null)
-//        source.put("title", null)
-//        source.put("in_author", null)
-//        source.put("in_title", null)
-//        source.put("edition", null)
-//        source.put("journal", null)
-//        source.put("series", null)
-//        source.put("volume", null)
-//        source.put("part", null)
-//        source.put("publisher", null)
-//        source.put("place_of_publication", null)
-//        source.put("page", null)
-//        source.put("is_modified", null)
-//        source.put("url", null)
         map.put("source", source)
 
         //taxon
@@ -224,10 +231,11 @@ class PlayerController {
         for (Map mo : objects) {
             if (items.get(mo.get("taxon.id")) == null) {
                 def taxon = [:]
+                def sn = mo.get("taxon.scientificName")
                 taxon.put("item_id", String.valueOf(mo.get("taxon.id")))
-                taxon.put("item_name", mo.get("taxon.scientificName"))
+                taxon.put("item_name", sn)
                 taxon.put("url", "http://bie.ala.org.au/species/" + mo.get("taxon.lsid"))
-                taxon.put("to_key", null)
+                taxon.put("to_key", taxonKeyLink.containsKey(sn) ? String.valueOf(taxonKeyLink.get(sn)) : null)
                 taxon.put("link_to_item_id", null)
                 taxon.put("link_to_item_name", null)
                 taxon.put("link_to_url", null)
@@ -250,148 +258,70 @@ class PlayerController {
     }
 
     def orderQuestions(values) {
-        AtomicInteger ids = new AtomicInteger(1)
+        //for keybase data
 
-        def orderedQuestions = orderValues(values, ids.intValue(), ids, null, 1)
+        def currentId = 1
 
-        orderedQuestions
-    }
+        def writtenAttributes = [:]
+        def previousTaxon = null
+        def orderedQuestions = []
+        def parentIds = [:]
 
-    def orderValues(objects, parentId, position, nextAttributeLabel, depth) {
-        List<Map> output = new ArrayList<Map>()
+        def parentId = 1
 
+        def firstAttributeId = values.get(0).get("attribute.id")
 
-        def attributes = [:]
-        Set attributesUniqueNames = new HashSet<String>()
-        for (Map p : objects) {
-            if (nextAttributeLabel == null || nextAttributeLabel.equals(p.get("attribute.label"))) {
-                def key = p.get("attribute.id")
-                attributesUniqueNames.add(p.get("attribute.label"))
-                Set set = null
-                if (attributes.containsKey(key)) {
-                    set = attributes.get(key)
+        for (Map o : values) {
+            def attributeId = o.get("attribute.id")
+            def label = "description".equals(o.get("attribute.label")) ? "" : o.get("attribute.label") + ": "
+            label +=
+                    (o.get("text") != null ? o.get("text") :
+                            (o.get("min") == o.get("max") ? o.get("min") : o.get("min") + " - " + o.get("max"))) +
+                            " " + (o.get("attribute.units") != null ? o.get("attribute.units") : "")
+            def tid = o.get("taxon.id")
+
+            def key = attributeId + ';' + label
+
+            // update taxonId of previous record
+            if (orderedQuestions.size() > 0 && orderedQuestions.last().item == null &&
+                    (parentIds.containsKey(attributeId) || tid != previousTaxon)) {
+                orderedQuestions.last().item = String.valueOf(previousTaxon)
+            }
+
+            // write this lead if it not already written
+            if (!writtenAttributes.containsKey(key)) {
+                //lead id
+                currentId = currentId + 1
+
+                writtenAttributes.put(key, currentId)
+
+                if (parentIds.containsKey(attributeId)) {
+                    parentId = parentIds.get(attributeId)
                 } else {
-                    set = new HashSet()
+                    parentIds.put(attributeId, parentId)
                 }
-                set.add(p.get("taxon.scientificName"))
-                attributes.put(key, set)
-            }
-        }
 
-        def maxSize = 0
-        def attributeId = -1
-        //(old) get the next best attribute by taxon coverage
-//        attributes.each { k, v ->
-//            if (v.size() > maxSize || (v.size() == maxSize && k < attributeId)) {
-//                attributeId = k
-//                maxSize = v.size()
-//            }
-//        }
-        //(keybase) get the next best attribute by largest taxon count to identify the next ordered couplet
-        attributes.each { k, v ->
-            if (attributeId == -1 || maxSize < v.size()) {
-                attributeId = k
-                maxSize = v.size()
-            }
-        }
-
-        Set taxonSet = attributes.get(attributeId)
-
-        //split attribute by value description
-        //include value description "Not defined" for uncovered taxa
-        Map values = [:]
-        for (Map p : objects) {
-            def key = p.get("attribute.id")
-            def value = null
-            if (key == attributeId) {
-                def o = p
-                value = "description".equals(o.get("attribute.label")) ? "" : o.get("attribute.label") + ": "
-                value +=
-                        (o.get("text") != null ? o.get("text") :
-                                (o.get("min") == o.get("max") ? o.get("min") : o.get("min") + " - " + o.get("max"))) +
-                        " " + (o.get("attribute.units") != null ? o.get("attribute.units") : "")
-            } else if (!taxonSet.contains(p.get("taxon.scientificName"))) {
-                value = "Not defined"
-            }
-            if (value != null) {
-                def list = values.get(value)
-                if (list == null) list = new ArrayList<Map>()
-                list.add(p)
-                values.put(value, list)
-            }
-        }
-
-        if (values.size() == 1) {
-            //convert to list of q's for taxon
-            values.each { k, v ->
-                v.each { v1 ->
-                    def next = [:]
-                    next.parent_id = String.valueOf(parentId)
-                    next.lead_id = String.valueOf(position.incrementAndGet())
-                    next.lead_text = v1.get("taxon.scientificName")
-                    //next.item = "Taxon: " + v1.get("taxon.id")
-                    next.item = String.valueOf(v1.get("taxon.id"))
-                    output.add(next)
-                }
-            }
-        } else if (values.size() > 3 && attributesUniqueNames.size() > 1 && depth < MAX_DEPTH) {
-            //convert to list of q's for next attribute
-            attributesUniqueNames.each { v ->
                 def next = [:]
                 next.parent_id = String.valueOf(parentId)
-                next.lead_id = String.valueOf(position.incrementAndGet())
-                next.lead_text = "Question: " + v
+                next.lead_id = String.valueOf(currentId)
+                next.lead_text = label
+
+                //next.item is updated in the next loop 
                 next.item = null
 
-                output.add(next)
+                orderedQuestions.add(next)
 
-                //repeat using subset of objects that have the same unique attribute name
-                def list = new ArrayList<Map>()
-                objects.each { obj ->
-                    if (nextAttributeLabel == null || !nextAttributeLabel.equals(obj.get("attribute.label"))) {
-                        list.add(obj)
-                    }
-                }
-                output.addAll(orderValues(list, next.lead_id, position, v, depth + 1))
+                //makes parentId available for next loop
+                //when there is rollback to a previous attribute the parentId stored in parentIds is used
+                parentId = currentId
             }
-        } else {
-            //drill into each value
-            values.each { k, v ->
-                //write this one
-                def next = [:]
-                next.parent_id = String.valueOf(parentId)
-                next.lead_id = String.valueOf(position.incrementAndGet())
-                def o = v.get(0)
-                next.lead_text = k
 
-                //set taxon value if within the remaining v's if # taxon = 1
-                Set vs = new HashSet<String>()
-                Set tx = new HashSet<String>()
-                v.each { a ->
-                    vs.add(a.get("id"))
-                    tx.add(a.get("taxon.id"))
-                }
-                if (tx.size() == 1) {
-                    next.item = String.valueOf(tx.first())
-
-                    output.add(next)
-                } else {
-                    next.item = null
-
-                    output.add(next)
-
-                    //repeat using subset of objects that intersect v.taxon (tx)
-                    def list = new ArrayList<Map>()
-                    objects.each { obj ->
-                        if (tx.contains(obj.get("taxon.id")) && obj.get("attribute.id") != attributeId) {
-                            list.add(obj)
-                        }
-                    }
-                    output.addAll(orderValues(list, next.lead_id, position, null, depth + 1))
-                }
-            }
+            previousTaxon = tid
         }
 
-        output
+        // update taxonId of previous record
+        orderedQuestions.last().item = String.valueOf(previousTaxon)
+
+        orderedQuestions
     }
 }
